@@ -1,0 +1,17 @@
+{
+  "name": "database-devtools-workspace",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter database-devtools build",
+    "dev:cli": "pnpm --filter database-devtools dev",
+    "dev:web": "pnpm --filter @database-devtools/web dev",
+    "dev:example": "pnpm --filter @database-devtools/example start",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
