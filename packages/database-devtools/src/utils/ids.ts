@@ -14,6 +14,14 @@ export function generateSyncId(): string {
   return generateUniqueId('sync');
 }
 
+export function generateTransactionId(): string {
+  return generateUniqueId('txn');
+}
+
+export function generateWriteId(): string {
+  return generateUniqueId('write');
+}
+
 function generateUniqueId(prefix: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `${prefix}-${crypto.randomUUID()}`;

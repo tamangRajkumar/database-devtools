@@ -1,4 +1,5 @@
 import { DevToolsProvider } from './context/DevToolsContext';
+import { EditModeProvider } from './context/EditModeContext';
 import { ExplorerProvider } from './context/ExplorerContext';
 import { SqlWorkspaceProvider } from './context/SqlWorkspaceContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -8,11 +9,13 @@ export function App() {
   return (
     <ThemeProvider>
       <DevToolsProvider>
-        <ExplorerProvider>
-          <SqlWorkspaceProvider>
-            <DevToolsShell />
-          </SqlWorkspaceProvider>
-        </ExplorerProvider>
+        <EditModeProvider>
+          <ExplorerProvider>
+            <SqlWorkspaceProvider>
+              <DevToolsShell />
+            </SqlWorkspaceProvider>
+          </ExplorerProvider>
+        </EditModeProvider>
       </DevToolsProvider>
     </ThemeProvider>
   );

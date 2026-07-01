@@ -57,6 +57,17 @@ const db = await SQLite.openDatabaseAsync('myapp.db');
 
 After **Refresh**, the browser UI shows real tables, schema, and supports read-only SQL queries (`SELECT`, `PRAGMA`, `EXPLAIN`, `WITH`). Use **Explorer** to browse tables; use **SQL** for the full query console with history and export.
 
+### Editing (live device writes)
+
+Edits run on the **live database on the mobile device**, not on the browser snapshot. The SQL Workspace stays read-only.
+
+1. Toggle **Edit** in the top bar (opt-in, persisted in `localStorage`)
+2. A transaction opens automatically on the selected device
+3. In **Explorer**, insert rows, edit row fields in the drawer, or delete rows
+4. **Commit** applies changes and refreshes the snapshot; **Discard** rolls back
+
+Writes use parameterized SQL on the device via `EditableDatabaseAdapter` (`beginTransaction`, `commitTransaction`, `rollbackTransaction`, `executeWrite`). The expo-sqlite adapter implements this with `BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK`.
+
 ## Quick start
 
 ```bash

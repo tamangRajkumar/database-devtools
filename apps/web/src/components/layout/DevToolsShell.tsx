@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { GlobalConfirmDialog } from '../edit/ConfirmDialog';
+import { TransactionBar } from '../edit/TransactionBar';
 import { MainContent } from './MainContent';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -11,6 +13,8 @@ export function DevToolsShell() {
   return (
     <div className="devtools-shell">
       <TopBar onMenuToggle={() => setSidebarOpen((open) => !open)} />
+      <TransactionBar />
+      <GlobalConfirmDialog />
       <div className="devtools-body">
         <Sidebar
           activeNav={activeNav}

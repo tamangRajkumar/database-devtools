@@ -16,6 +16,8 @@ import { Heartbeat } from './heartbeat';
 import { MessageRouter } from './messageRouter';
 import { RefreshCoordinator } from './refreshCoordinator';
 import { SyncSessionManager } from './syncSessionManager';
+import { WriteCoordinator } from './writeCoordinator';
+import { WriteSessionManager } from './writeSessionManager';
 
 export type DevToolsServerOptions = {
   host?: string;
@@ -30,7 +32,9 @@ export type DevToolsServer = {
   router: MessageRouter;
   heartbeat: Heartbeat;
   syncSessions: SyncSessionManager;
+  writeSessions: WriteSessionManager;
   refreshCoordinator: RefreshCoordinator;
+  writeCoordinator: WriteCoordinator;
   close: () => Promise<void>;
 };
 
@@ -46,6 +50,7 @@ export async function createDevToolsServer(
   const router = new MessageRouter(connectionManager, deviceRegistry);
   const heartbeat = new Heartbeat(connectionManager, router);
   const syncSessions = new SyncSessionManager();
+  const writeSessions = new WriteSessionManager();
 
   const displayHost = host === '0.0.0.0' ? 'localhost' : host;
   const httpBaseUrl = buildDevToolsHttpUrl(displayHost, port);
@@ -55,6 +60,7 @@ export async function createDevToolsServer(
     syncSessions,
     httpBaseUrl,
   );
+  const writeCoordinator = new WriteCoordinator(connectionManager, router, writeSessions);
 
   app.get('/health', (_request, response) => {
     response.json({ ok: true, ...deviceRegistry.snapshot() });
@@ -101,10 +107,18 @@ export async function createDevToolsServer(
   });
 
   const httpServer = createServer(app);
-  attachWebSocket(httpServer, connectionManager, router, heartbeat, refreshCoordinator);
+  attachWebSocket(
+    httpServer,
+    connectionManager,
+    router,
+    heartbeat,
+    refreshCoordinator,
+    writeCoordinator,
+  );
 
   const syncTimeoutInterval = setInterval(() => {
     refreshCoordinator.checkTimeouts();
+    writeCoordinator.checkTimeouts();
   }, 5_000);
 
   await new Promise<void>((resolve, reject) => {
@@ -125,7 +139,9 @@ export async function createDevToolsServer(
     router,
     heartbeat,
     syncSessions,
+    writeSessions,
     refreshCoordinator,
+    writeCoordinator,
     close: () =>
       new Promise((resolve, reject) => {
         clearInterval(syncTimeoutInterval);

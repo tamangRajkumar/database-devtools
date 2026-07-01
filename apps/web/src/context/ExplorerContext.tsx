@@ -44,6 +44,8 @@ type ExplorerContextValue = {
   selectedRow: ExplorerRow | null;
   setSelectedRow: (row: ExplorerRow | null) => void;
   totalPages: number;
+  dataVersion: number;
+  bumpDataVersion: () => void;
 };
 
 const ExplorerContext = createContext<ExplorerContextValue | null>(null);
@@ -67,6 +69,11 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     dir: 'asc',
   });
   const [selectedRow, setSelectedRow] = useState<ExplorerRow | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const bumpDataVersion = useCallback(() => {
+    setDataVersion((version) => version + 1);
+  }, []);
 
   const filteredTables = useMemo(
     () => sortTables(filterTables(tables, tableSearch), tableSort, tableSortDir),
@@ -146,6 +153,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     sort.dir,
     debouncedRowSearch,
     fetchTablePage,
+    dataVersion,
   ]);
 
   const totalPages = tablePage ? Math.max(1, Math.ceil(tablePage.totalCount / tablePage.pageSize)) : 1;
@@ -195,6 +203,8 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       selectedRow,
       setSelectedRow,
       totalPages,
+      dataVersion,
+      bumpDataVersion,
     }),
     [
       selectedTable,
@@ -214,6 +224,8 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       tableColumns,
       selectedRow,
       totalPages,
+      dataVersion,
+      bumpDataVersion,
     ],
   );
 

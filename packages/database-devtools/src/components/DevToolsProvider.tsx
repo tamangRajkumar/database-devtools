@@ -4,6 +4,12 @@ import {
   type ConnectionState,
 } from '../client/createDevToolsClient';
 import { handleSyncDatabase } from '../client/handleSyncDatabase';
+import {
+  handleBeginTransaction,
+  handleCommitTransaction,
+  handleExecuteWrite,
+  handleRollbackTransaction,
+} from '../client/handleWriteOperations';
 import { DevToolsContext } from '../hooks/useDevTools';
 import type { DatabaseAdapter } from '../types/adapter';
 import { DevToolsRole } from '../types/protocol';
@@ -58,6 +64,50 @@ export function DevToolsProvider({
             error instanceof Error ? error.message : 'Database export or upload failed';
           clientRef.current?.reportExportFailed(message.syncId, errorMessage);
         }
+      },
+      onBeginTransaction: async (message) => {
+        const client = clientRef.current;
+
+        if (!client) {
+          return;
+        }
+
+        await handleBeginTransaction(databaseRef.current, message, (ack) => {
+          client.sendTransactionAck(ack);
+        });
+      },
+      onCommitTransaction: async (message) => {
+        const client = clientRef.current;
+
+        if (!client) {
+          return;
+        }
+
+        await handleCommitTransaction(databaseRef.current, message, (ack) => {
+          client.sendTransactionAck(ack);
+        });
+      },
+      onRollbackTransaction: async (message) => {
+        const client = clientRef.current;
+
+        if (!client) {
+          return;
+        }
+
+        await handleRollbackTransaction(databaseRef.current, message, (ack) => {
+          client.sendTransactionAck(ack);
+        });
+      },
+      onExecuteWrite: async (message) => {
+        const client = clientRef.current;
+
+        if (!client) {
+          return;
+        }
+
+        await handleExecuteWrite(databaseRef.current, message, (ack) => {
+          client.sendWriteAck(ack);
+        });
       },
     });
 

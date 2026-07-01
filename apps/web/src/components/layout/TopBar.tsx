@@ -1,4 +1,5 @@
 import { DeviceSelector } from '../DeviceSelector';
+import { EditModeToggle } from '../edit/EditModeToggle';
 import { RefreshButton } from '../RefreshButton';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeToggle } from '../ThemeToggle';
@@ -42,6 +43,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
       </div>
 
       <div className="top-bar__right">
+        <EditModeToggle />
         <RefreshButton />
         <StatusBadge state={connectionState} label={`Hub ${connectionState}`} />
         <ThemeToggle />

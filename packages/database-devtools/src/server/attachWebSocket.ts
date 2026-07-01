@@ -3,16 +3,23 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import {
   DEVTOOLS_WS_PATH,
   DevToolsRole,
+  isBeginTransactionRequestMessage,
+  isCommitTransactionRequestMessage,
   isExportFailedMessage,
   isPongMessage,
   isRefreshRequestMessage,
   isRegisterMessage,
+  isRollbackTransactionRequestMessage,
+  isTransactionAckMessage,
+  isWriteAckMessage,
+  isWriteRequestMessage,
 } from '../types/protocol';
 import { logger } from '../utils/logger';
 import type { ConnectionManager } from './connectionManager';
 import type { Heartbeat } from './heartbeat';
 import type { MessageRouter } from './messageRouter';
 import type { RefreshCoordinator } from './refreshCoordinator';
+import type { WriteCoordinator } from './writeCoordinator';
 
 export type AttachWebSocketResult = {
   wss: WebSocketServer;
@@ -24,6 +31,7 @@ export function attachWebSocket(
   router: MessageRouter,
   heartbeat: Heartbeat,
   refreshCoordinator: RefreshCoordinator,
+  writeCoordinator: WriteCoordinator,
 ): AttachWebSocketResult {
   const wss = new WebSocketServer({ server: httpServer, path: DEVTOOLS_WS_PATH });
 
@@ -87,8 +95,38 @@ export function attachWebSocket(
         return;
       }
 
+      if (isBeginTransactionRequestMessage(parsed)) {
+        writeCoordinator.handleBeginTransactionRequest(socket, parsed);
+        return;
+      }
+
+      if (isCommitTransactionRequestMessage(parsed)) {
+        writeCoordinator.handleCommitTransactionRequest(socket, parsed);
+        return;
+      }
+
+      if (isRollbackTransactionRequestMessage(parsed)) {
+        writeCoordinator.handleRollbackTransactionRequest(socket, parsed);
+        return;
+      }
+
+      if (isWriteRequestMessage(parsed)) {
+        writeCoordinator.handleWriteRequest(socket, parsed);
+        return;
+      }
+
       if (isExportFailedMessage(parsed)) {
         refreshCoordinator.handleExportFailed(parsed.syncId, parsed.message);
+        return;
+      }
+
+      if (isTransactionAckMessage(parsed)) {
+        writeCoordinator.handleTransactionAck(parsed);
+        return;
+      }
+
+      if (isWriteAckMessage(parsed)) {
+        writeCoordinator.handleWriteAck(parsed);
       }
     });
 

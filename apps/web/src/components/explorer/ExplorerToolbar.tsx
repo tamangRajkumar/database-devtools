@@ -1,4 +1,7 @@
+import { useState } from 'react';
+import { useEditMode } from '../../context/EditModeContext';
 import { useExplorer } from '../../context/ExplorerContext';
+import { InsertRowDialog } from './InsertRowDialog';
 
 export function ExplorerToolbar() {
   const {
@@ -9,6 +12,8 @@ export function ExplorerToolbar() {
     rowSearch,
     setRowSearch,
   } = useExplorer();
+  const { editMode, transactionOpen } = useEditMode();
+  const [insertOpen, setInsertOpen] = useState(false);
 
   if (!selectedTable) {
     return null;
@@ -49,6 +54,15 @@ export function ExplorerToolbar() {
       </div>
 
       <div className="explorer-toolbar__right">
+        {view === 'data' && editMode && transactionOpen && (
+          <button
+            type="button"
+            className="button button--ghost explorer-toolbar__insert"
+            onClick={() => setInsertOpen(true)}
+          >
+            + Insert row
+          </button>
+        )}
         {view === 'data' && (
           <input
             type="search"
@@ -60,6 +74,7 @@ export function ExplorerToolbar() {
           />
         )}
       </div>
+      {insertOpen && <InsertRowDialog onClose={() => setInsertOpen(false)} />}
     </div>
   );
 }

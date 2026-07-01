@@ -54,7 +54,8 @@ export {
   wsUrlToHttpUrl,
 } from './types/protocol';
 
-export type { DatabaseAdapter } from './types/adapter';
+export type { DatabaseAdapter, EditableDatabaseAdapter, WriteResult } from './types/adapter';
+export { isEditableDatabaseAdapter } from './types/adapter';
 export type { DatabaseDialect } from './types/dialect';
 export type {
   ColumnInfo,
@@ -65,10 +66,23 @@ export type {
   TablePageRequest,
   TablePageResult,
 } from './types/inspection';
-export type { ConnectionState, DevToolsClient, DevToolsClientOptions } from './client/createDevToolsClient';
+export type {
+  DeleteOperation,
+  InsertOperation,
+  UpdateOperation,
+  WriteCellValue,
+  WriteOperation,
+} from './types/write';
+export type { ConnectionState, DevToolsClient, DevToolsClientOptions, TransactionState } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
 export { fetchSnapshot } from './client/fetchSnapshot';
 export { handleSyncDatabase } from './client/handleSyncDatabase';
+export {
+  handleBeginTransaction,
+  handleCommitTransaction,
+  handleExecuteWrite,
+  handleRollbackTransaction,
+} from './client/handleWriteOperations';
 export type { DatabaseDevToolsProps } from './components/DatabaseDevTools';
 export { DatabaseDevTools } from './components/DatabaseDevTools';
 export type { DevToolsServer, DevToolsServerOptions } from './server/createDevToolsServer';

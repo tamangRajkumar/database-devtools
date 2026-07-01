@@ -13,6 +13,7 @@ import {
   fetchSnapshot,
   type ConnectionState,
   type DevToolsClient,
+  type TransactionState,
 } from 'database-devtools/client';
 import {
   DevToolsRole,
@@ -21,7 +22,7 @@ import {
   type MobileDeviceInfo,
   type SyncState,
 } from 'database-devtools/protocol';
-import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult } from 'database-devtools';
+import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult, WriteOperation } from 'database-devtools';
 import { isSqliteDatabase, SqliteSession } from '../lib/sqliteSession';
 import { validateReadOnlySql } from '../lib/sqlSafety';
 
@@ -55,6 +56,11 @@ type DevToolsContextValue = {
   fetchTablePage: (request: TablePageRequest) => TablePageResult;
   queryError: string | null;
   clearQueryError: () => void;
+  transactionState: TransactionState;
+  beginWriteTransaction: () => Promise<void>;
+  commitWriteTransaction: () => Promise<void>;
+  rollbackWriteTransaction: () => Promise<void>;
+  executeWriteOperation: (operation: WriteOperation) => Promise<{ rowsAffected: number }>;
 };
 
 const DevToolsContext = createContext<DevToolsContextValue | null>(null);
@@ -73,6 +79,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [schema, setSchema] = useState<SchemaTable[]>([]);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [databaseLoaded, setDatabaseLoaded] = useState(false);
+  const [transactionState, setTransactionState] = useState<TransactionState>('idle');
 
   const clientRef = useRef<DevToolsClient | null>(null);
   const activeSyncIdRef = useRef<string | null>(null);
@@ -168,6 +175,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
         setSyncState(message.code === 'TIMEOUT' ? 'timeout' : 'failed');
         activeSyncIdRef.current = null;
       },
+      onTransactionStateChange: setTransactionState,
     });
 
     clientRef.current = client;
@@ -263,6 +271,50 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setQueryError(null);
   }, []);
 
+  const beginWriteTransaction = useCallback(async () => {
+    if (!selectedDeviceId) {
+      throw new Error('No device selected');
+    }
+
+    const client = clientRef.current;
+
+    if (!client) {
+      throw new Error('Not connected to the DevTools hub');
+    }
+
+    await client.beginTransaction(selectedDeviceId);
+  }, [selectedDeviceId]);
+
+  const commitWriteTransaction = useCallback(async () => {
+    const client = clientRef.current;
+
+    if (!client) {
+      throw new Error('Not connected to the DevTools hub');
+    }
+
+    await client.commitTransaction();
+  }, []);
+
+  const rollbackWriteTransaction = useCallback(async () => {
+    const client = clientRef.current;
+
+    if (!client) {
+      throw new Error('Not connected to the DevTools hub');
+    }
+
+    await client.rollbackTransaction();
+  }, []);
+
+  const executeWriteOperation = useCallback(async (operation: WriteOperation) => {
+    const client = clientRef.current;
+
+    if (!client) {
+      throw new Error('Not connected to the DevTools hub');
+    }
+
+    return client.executeWrite(operation);
+  }, []);
+
   const value = useMemo(
     () => ({
       connectionState,
@@ -284,6 +336,11 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       fetchTablePage,
       queryError,
       clearQueryError,
+      transactionState,
+      beginWriteTransaction,
+      commitWriteTransaction,
+      rollbackWriteTransaction,
+      executeWriteOperation,
     }),
     [
       connectionState,
@@ -304,6 +361,11 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       fetchTablePage,
       queryError,
       clearQueryError,
+      transactionState,
+      beginWriteTransaction,
+      commitWriteTransaction,
+      rollbackWriteTransaction,
+      executeWriteOperation,
     ],
   );
 
