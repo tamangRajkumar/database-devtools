@@ -1,0 +1,19 @@
+@import './themes.css';
+@import './layout.css';
+@import './components.css';
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

@@ -17,6 +17,18 @@ import { DatabaseDevTools } from 'database-devtools';
 - Tap to open settings modal (device ID, server URL, reconnect)
 - Pass `enabled={false}` to disable in dev, or `enabled={true}` to force on
 
+## Browser UI
+
+The web app (`apps/web`) is a Chrome DevTools-style shell for inspecting connected mobile devices.
+
+- **Sidebar** — Overview, Tables, Query, Schema
+- **Top bar** — device selector, hub connection status, light/dark theme toggle
+- **Responsive** — sidebar collapses to a drawer on narrow screens
+- **Live data** — connection state and device metadata from the WebSocket hub
+- **Placeholder panels** — Tables, Query, and Schema show sample data until Phase 4 wires real database access
+
+Start the CLI server first (`pnpm dev:cli`), then `pnpm dev:web`. Theme preference is stored in `localStorage` under `database-devtools-theme`.
+
 ## Quick start
 
 ```bash
