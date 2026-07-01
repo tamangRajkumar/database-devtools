@@ -6,10 +6,10 @@ import {
   type BroadcastMessage,
   type DeviceStatusMessage,
   type ServerMessage,
-} from '../types/protocol.js';
-import { logger } from '../utils/logger.js';
-import type { ConnectionManager } from './connectionManager.js';
-import type { DeviceRegistry } from './deviceRegistry.js';
+} from '../types/protocol';
+import { logger } from '../utils/logger';
+import type { ConnectionManager } from './connectionManager';
+import type { DeviceRegistry } from './deviceRegistry';
 
 export type OutboundMessage = ServerMessage;
 

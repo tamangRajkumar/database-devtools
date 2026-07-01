@@ -1,6 +1,6 @@
-import type { ConnectionManager } from './connectionManager.js';
-import type { DeviceStatusPayload } from '../types/protocol.js';
-import { DevToolsRole } from '../types/protocol.js';
+import type { ConnectionManager } from './connectionManager';
+import type { DeviceStatusPayload } from '../types/protocol';
+import { DevToolsRole } from '../types/protocol';
 
 export class DeviceRegistry {
   constructor(private readonly connectionManager: ConnectionManager) {}

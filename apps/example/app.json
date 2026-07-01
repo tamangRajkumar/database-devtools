@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
     "ios": {
       "supportsTablet": true
     },

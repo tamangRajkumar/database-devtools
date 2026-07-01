@@ -4,11 +4,11 @@ import {
   HEARTBEAT_TIMEOUT_MS,
   MessageType,
   type PingMessage,
-} from '../types/protocol.js';
-import { generatePingId } from '../utils/ids.js';
-import { logger } from '../utils/logger.js';
-import type { ConnectionManager } from './connectionManager.js';
-import type { MessageRouter } from './messageRouter.js';
+} from '../types/protocol';
+import { generatePingId } from '../utils/ids';
+import { logger } from '../utils/logger';
+import type { ConnectionManager } from './connectionManager';
+import type { MessageRouter } from './messageRouter';
 
 export class Heartbeat {
   private interval: ReturnType<typeof setInterval> | null = null;

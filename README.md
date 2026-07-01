@@ -2,7 +2,20 @@
 
 Chrome DevTools-like experience for databases running inside React Native applications.
 
-This repository is a **pnpm workspace monorepo**. Phase 2 provides the real-time communication layer between mobile apps, the Inspector Server, and the browser UI.
+This repository is a **pnpm workspace monorepo**. Phase 2 provides the real-time communication layer; Phase 3 adds the mobile integration UI.
+
+## Mobile usage
+
+```tsx
+import { DatabaseDevTools } from 'database-devtools';
+
+<DatabaseDevTools database={db} />
+```
+
+- Renders only in development (`__DEV__`) by default
+- Floating **DB** button with connection status dot
+- Tap to open settings modal (device ID, server URL, reconnect)
+- Pass `enabled={false}` to disable in dev, or `enabled={true}` to force on
 
 ## Quick start
 
@@ -31,7 +44,8 @@ pnpm dev:example
 2. **Single device** — open the web UI and example app:
    - Web UI shows **Connected** and **1 mobile device connected**
    - CLI logs `✓ Mobile Connected` and `✓ Browser Connected`
-   - Mobile app shows **Connected**
+   - Mobile app shows floating **DB** button (green dot when connected)
+   - Tap **DB** to open settings modal with device ID and server URL
 
 3. **Multiple devices** — run the example app on two simulators/emulators:
    - Web UI shows **2 mobile devices connected** with device IDs listed

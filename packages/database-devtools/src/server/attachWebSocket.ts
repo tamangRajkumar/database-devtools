@@ -5,11 +5,11 @@ import {
   DevToolsRole,
   isPongMessage,
   isRegisterMessage,
-} from '../types/protocol.js';
-import { logger } from '../utils/logger.js';
-import type { ConnectionManager } from './connectionManager.js';
-import type { Heartbeat } from './heartbeat.js';
-import type { MessageRouter } from './messageRouter.js';
+} from '../types/protocol';
+import { logger } from '../utils/logger';
+import type { ConnectionManager } from './connectionManager';
+import type { Heartbeat } from './heartbeat';
+import type { MessageRouter } from './messageRouter';
 
 export type AttachWebSocketResult = {
   wss: WebSocketServer;

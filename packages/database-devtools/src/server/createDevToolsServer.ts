@@ -5,13 +5,13 @@ import {
   DEFAULT_DEVTOOLS_PORT,
   buildDevToolsHttpUrl,
   buildDevToolsWsUrl,
-} from '../types/protocol.js';
-import { logger } from '../utils/logger.js';
-import { attachWebSocket } from './attachWebSocket.js';
-import { ConnectionManager } from './connectionManager.js';
-import { DeviceRegistry } from './deviceRegistry.js';
-import { Heartbeat } from './heartbeat.js';
-import { MessageRouter } from './messageRouter.js';
+} from '../types/protocol';
+import { logger } from '../utils/logger';
+import { attachWebSocket } from './attachWebSocket';
+import { ConnectionManager } from './connectionManager';
+import { DeviceRegistry } from './deviceRegistry';
+import { Heartbeat } from './heartbeat';
+import { MessageRouter } from './messageRouter';
 
 export type DevToolsServerOptions = {
   host?: string;

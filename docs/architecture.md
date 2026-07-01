@@ -25,11 +25,24 @@ The Inspector Server is the hub. Browser and mobile never communicate directly.
 packages/database-devtools/src/
 ├── cli/              # `npx database-devtools` entry
 ├── client/           # Reconnecting WebSocket client (mobile + browser)
-├── components/       # `<DatabaseDevTools />` React Native UI
+├── components/       # `<DatabaseDevTools />` overlay UI
+├── hooks/            # `useDevTools` context hook
 ├── server/           # Express + WebSocket hub
-├── types/            # Shared protocol types
-└── utils/            # Logger, reconnect backoff, ID generation
+├── types/            # Shared protocol + adapter types
+└── utils/            # Logger, reconnect, dev gate, metadata
 ```
+
+### Mobile component (`<DatabaseDevTools />`)
+
+| Piece | Role |
+|-------|------|
+| `DatabaseDevTools` | Dev-only gate + overlay shell |
+| `DevToolsProvider` | WebSocket lifecycle, context state |
+| `FloatingDevToolsButton` | Fixed FAB with connection status dot |
+| `DevToolsSettingsModal` | Connection info, device ID, server URL editor |
+| `ConnectionStatusBadge` | Labeled status pill for modal |
+
+Development-only by default (`__DEV__`). Returns `null` in production builds.
 
 ### Server modules
 
@@ -41,9 +54,9 @@ packages/database-devtools/src/
 | `heartbeat` | Server-initiated ping/pong; terminates dead sockets |
 | `attachWebSocket` | Wires connection lifecycle to manager + router |
 
-### Future adapter layer
+### Database adapter layer
 
-The `database` prop on `<DatabaseDevTools />` will accept adapter instances. Adapters will live in separate packages (e.g. `@database-devtools/sqlite`) to keep the core small.
+The `database` prop accepts a `DatabaseAdapter` stub (`{ id, name }`). Future adapters (e.g. `@database-devtools/sqlite`) will implement this interface.
 
 ## WebSocket protocol
 

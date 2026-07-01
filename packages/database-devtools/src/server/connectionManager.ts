@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
-import type { DevToolsRole, DeviceMetadata } from '../types/protocol.js';
-import { generateConnectionId } from '../utils/ids.js';
+import type { DevToolsRole, DeviceMetadata } from '../types/protocol';
+import { generateConnectionId } from '../utils/ids';
 
 export type ConnectedClient = {
   socket: WebSocket;

@@ -6,10 +6,10 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "react-native": "./src/index.ts",
+  "react-native": "./src/native.ts",
   "exports": {
     ".": {
-      "react-native": "./src/index.ts",
+      "react-native": "./src/native.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
@@ -46,10 +46,14 @@
   },
   "peerDependencies": {
     "react": ">=18",
-    "react-native": ">=0.73"
+    "react-native": ">=0.73",
+    "@expo/vector-icons": ">=14"
   },
   "peerDependenciesMeta": {
     "react-native": {
+      "optional": true
+    },
+    "@expo/vector-icons": {
       "optional": true
     }
   },
@@ -58,6 +62,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@expo/vector-icons": "^15.0.3",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.2",
     "@types/react": "~19.1.0",

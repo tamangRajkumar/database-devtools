@@ -1,8 +1,8 @@
-export type { DevToolsServer, DevToolsServerOptions } from './createDevToolsServer.js';
-export { createDevToolsServer } from './createDevToolsServer.js';
-export { ConnectionManager } from './connectionManager.js';
-export type { ConnectedClient } from './connectionManager.js';
-export { DeviceRegistry } from './deviceRegistry.js';
-export { MessageRouter } from './messageRouter.js';
-export type { OutboundMessage } from './messageRouter.js';
-export { Heartbeat } from './heartbeat.js';
+export type { DevToolsServer, DevToolsServerOptions } from './createDevToolsServer';
+export { createDevToolsServer } from './createDevToolsServer';
+export { ConnectionManager } from './connectionManager';
+export type { ConnectedClient } from './connectionManager';
+export { DeviceRegistry } from './deviceRegistry';
+export { MessageRouter } from './messageRouter';
+export type { OutboundMessage } from './messageRouter';
+export { Heartbeat } from './heartbeat';

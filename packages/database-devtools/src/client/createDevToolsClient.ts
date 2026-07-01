@@ -9,9 +9,9 @@ import {
   type DeviceMetadata,
   type DeviceStatusPayload,
   type RegisterMessage,
-} from '../types/protocol.js';
-import { generateDeviceId } from '../utils/ids.js';
-import { ReconnectScheduler } from '../utils/reconnect.js';
+} from '../types/protocol';
+import { generateDeviceId } from '../utils/ids';
+import { ReconnectScheduler } from '../utils/reconnect';
 
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
@@ -33,6 +33,9 @@ export type DevToolsClient = {
   disconnect: () => void;
   getConnectionState: () => ConnectionState;
   getDeviceStatus: () => DeviceStatusPayload | null;
+  getDeviceId: () => string | undefined;
+  getServerUrl: () => string;
+  setServerUrl: (url: string) => void;
 };
 
 export function createDevToolsClient(options: DevToolsClientOptions = {}): DevToolsClient {
@@ -51,7 +54,7 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
   const deviceId =
     role === DevToolsRole.MOBILE ? (options.deviceId ?? generateDeviceId()) : undefined;
 
-  const wsUrl =
+  let wsUrl =
     options.serverUrl ?? buildDevToolsWsUrl('localhost', DEFAULT_DEVTOOLS_PORT);
 
   const setConnectionState = (state: ConnectionState): void => {
@@ -157,10 +160,28 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     setConnectionState('disconnected');
   };
 
+  const setServerUrl = (url: string): void => {
+    wsUrl = url;
+    const wasConnected =
+      connectionState === 'connected' ||
+      connectionState === 'connecting' ||
+      connectionState === 'reconnecting';
+
+    disconnect();
+    intentionalDisconnect = false;
+
+    if (wasConnected) {
+      connect();
+    }
+  };
+
   return {
     connect,
     disconnect,
     getConnectionState: () => connectionState,
     getDeviceStatus: () => deviceStatus,
+    getDeviceId: () => deviceId,
+    getServerUrl: () => wsUrl,
+    setServerUrl,
   };
 }

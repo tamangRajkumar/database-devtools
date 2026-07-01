@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "database-devtools": "workspace:*",
+    "@expo/vector-icons": "^15.0.3",
     "expo": "~54.0.35",
+    "expo-modules-core": "~3.0.30",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5"

@@ -2,11 +2,14 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { DatabaseDevTools } from 'database-devtools';
 
+const mockDb = { id: 'example', name: 'Example SQLite (stub)' };
+
 export default function App() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Database DevTools Example</Text>
-      <DatabaseDevTools />
+      <Text style={styles.title}>My App</Text>
+      <Text style={styles.subtitle}>Tap the DB button to open DevTools settings</Text>
+      <DatabaseDevTools database={mockDb} />
       <StatusBar style="auto" />
     </View>
   );
@@ -21,8 +24,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
   },
 });

@@ -1,4 +1,4 @@
-import { createDevToolsServer } from '../server/createDevToolsServer.js';
+import { createDevToolsServer } from '../server/createDevToolsServer';
 
 async function main(): Promise<void> {
   const port = Number(process.env.DATABASE_DEVTOOLS_PORT ?? process.env.PORT ?? 3847);
