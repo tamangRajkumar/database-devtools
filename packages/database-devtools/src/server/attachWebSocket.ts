@@ -2,43 +2,44 @@ import type { Server } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
 import {
   DEVTOOLS_WS_PATH,
-  isClientMessage,
-  type DevToolsRole,
-  type ServerMessage,
+  DevToolsRole,
+  isPongMessage,
+  isRegisterMessage,
 } from '../types/protocol.js';
-import { DeviceRegistry } from './deviceRegistry.js';
+import { logger } from '../utils/logger.js';
+import type { ConnectionManager } from './connectionManager.js';
+import type { Heartbeat } from './heartbeat.js';
+import type { MessageRouter } from './messageRouter.js';
 
-type AttachedSocket = WebSocket & {
-  devToolsRole?: DevToolsRole;
-};
-
-export type AttachWebSocketOptions = {
-  onMobileConnected?: () => void;
-  onMobileDisconnected?: () => void;
+export type AttachWebSocketResult = {
+  wss: WebSocketServer;
 };
 
 export function attachWebSocket(
   httpServer: Server,
-  registry: DeviceRegistry,
-  options: AttachWebSocketOptions = {},
-): WebSocketServer {
+  connectionManager: ConnectionManager,
+  router: MessageRouter,
+  heartbeat: Heartbeat,
+): AttachWebSocketResult {
   const wss = new WebSocketServer({ server: httpServer, path: DEVTOOLS_WS_PATH });
 
-  const broadcastStatus = (): void => {
-    const message: ServerMessage = {
-      type: 'deviceStatus',
-      payload: registry.snapshot(),
-    };
-    const payload = JSON.stringify(message);
+  const handleDisconnect = (socket: WebSocket): void => {
+    const client = connectionManager.remove(socket);
 
-    for (const client of wss.clients) {
-      if (client.readyState === client.OPEN) {
-        client.send(payload);
-      }
+    if (!client) {
+      return;
     }
+
+    if (client.role === DevToolsRole.MOBILE) {
+      logger.mobileDisconnected(client.deviceId);
+    } else {
+      logger.browserDisconnected(client.connectionId);
+    }
+
+    router.broadcastDeviceStatus();
   };
 
-  wss.on('connection', (socket: AttachedSocket) => {
+  wss.on('connection', (socket: WebSocket) => {
     socket.on('message', (raw) => {
       let parsed: unknown;
 
@@ -48,36 +49,46 @@ export function attachWebSocket(
         return;
       }
 
-      if (!isClientMessage(parsed) || parsed.type !== 'register') {
+      if (isRegisterMessage(parsed)) {
+        const existing = connectionManager.getBySocket(socket);
+
+        if (existing) {
+          return;
+        }
+
+        const client = connectionManager.add({
+          socket,
+          role: parsed.role,
+          deviceId: parsed.deviceId,
+          metadata: parsed.metadata,
+        });
+
+        if (client.role === DevToolsRole.MOBILE) {
+          logger.mobileConnected(client.deviceId);
+        } else {
+          logger.browserConnected(client.connectionId);
+        }
+
+        router.broadcastDeviceStatus();
         return;
       }
 
-      const role = parsed.payload.role;
-      socket.devToolsRole = role;
-      registry.register(role);
-
-      if (role === 'mobile') {
-        console.log('[database-devtools] Mobile Connected');
-        options.onMobileConnected?.();
+      if (isPongMessage(parsed)) {
+        connectionManager.updateLastPong(socket);
+        return;
       }
-
-      broadcastStatus();
     });
 
     socket.on('close', () => {
-      if (!socket.devToolsRole) {
-        return;
-      }
+      handleDisconnect(socket);
+    });
 
-      registry.unregister(socket.devToolsRole);
-
-      if (socket.devToolsRole === 'mobile') {
-        options.onMobileDisconnected?.();
-      }
-
-      broadcastStatus();
+    socket.on('error', () => {
+      handleDisconnect(socket);
     });
   });
 
-  return wss;
+  heartbeat.start();
+
+  return { wss };
 }

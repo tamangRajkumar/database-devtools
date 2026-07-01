@@ -2,7 +2,7 @@
 
 Chrome DevTools-like experience for databases running inside React Native applications.
 
-This repository is a **pnpm workspace monorepo**. Phase 1 provides project architecture only — no database adapters yet.
+This repository is a **pnpm workspace monorepo**. Phase 2 provides the real-time communication layer between mobile apps, the Inspector Server, and the browser UI.
 
 ## Quick start
 
@@ -20,11 +20,25 @@ pnpm dev:web
 pnpm dev:example
 ```
 
-When the example app loads, the mobile client connects to the CLI server:
+## Verify Phase 2
 
-- **Mobile console:** `Connected to Database DevTools`
-- **CLI console:** `Mobile Connected`
-- **Web UI:** Connection status updates from "Waiting for mobile..." to "Mobile connected"
+1. **Server health** — with the CLI running:
+   ```bash
+   curl http://localhost:3847/health
+   ```
+   Returns `browserCount`, `mobileCount`, and device lists.
+
+2. **Single device** — open the web UI and example app:
+   - Web UI shows **Connected** and **1 mobile device connected**
+   - CLI logs `✓ Mobile Connected` and `✓ Browser Connected`
+   - Mobile app shows **Connected**
+
+3. **Multiple devices** — run the example app on two simulators/emulators:
+   - Web UI shows **2 mobile devices connected** with device IDs listed
+
+4. **Auto-reconnect** — restart the CLI server (`Ctrl+C`, then `pnpm dev:cli`):
+   - Browser and mobile reconnect automatically within ~30s
+   - Web UI briefly shows **Reconnecting**, then **Connected**
 
 ## Repository layout
 
@@ -43,6 +57,8 @@ database-devtools/
 | `DATABASE_DEVTOOLS_HOST` | `0.0.0.0` | CLI |
 | `DATABASE_DEVTOOLS_PORT` | `3847` | CLI |
 | `EXPO_PUBLIC_DATABASE_DEVTOOLS_URL` | `ws://localhost:3847/ws` | Example app |
+
+For physical devices, set `EXPO_PUBLIC_DATABASE_DEVTOOLS_URL=ws://<YOUR_LAN_IP>:3847/ws`.
 
 ## License
 

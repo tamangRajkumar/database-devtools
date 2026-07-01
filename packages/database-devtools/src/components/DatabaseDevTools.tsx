@@ -1,7 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { Text, View, type ViewStyle } from 'react-native';
-import { createDevToolsClient } from '../client/createDevToolsClient.js';
-import { buildDevToolsWsUrl, DEFAULT_DEVTOOLS_PORT } from '../types/protocol.js';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Text, View, type ViewStyle } from 'react-native';
+import {
+  createDevToolsClient,
+  type ConnectionState,
+} from '../client/createDevToolsClient.js';
+import { buildDevToolsWsUrl, DEFAULT_DEVTOOLS_PORT, DevToolsRole } from '../types/protocol.js';
+
+export type { ConnectionState };
 
 export type DatabaseDevToolsProps = {
   /** Reserved for future database adapters (SQLite, Realm, DuckDB, custom). */
@@ -9,6 +14,7 @@ export type DatabaseDevToolsProps = {
   /** WebSocket URL override, e.g. ws://192.168.1.10:3847/ws */
   serverUrl?: string;
   style?: ViewStyle;
+  onConnectionStateChange?: (state: ConnectionState) => void;
 };
 
 function resolveServerUrl(serverUrl?: string): string {
@@ -30,13 +36,40 @@ function resolveServerUrl(serverUrl?: string): string {
   return buildDevToolsWsUrl('localhost', DEFAULT_DEVTOOLS_PORT);
 }
 
-export function DatabaseDevTools({ database: _database, serverUrl, style }: DatabaseDevToolsProps) {
+function formatConnectionLabel(state: ConnectionState): string {
+  switch (state) {
+    case 'connected':
+      return 'Connected';
+    case 'reconnecting':
+      return 'Reconnecting...';
+    case 'connecting':
+      return 'Connecting...';
+    case 'disconnected':
+      return 'Disconnected';
+  }
+}
+
+export function DatabaseDevTools({
+  database: _database,
+  serverUrl,
+  style,
+  onConnectionStateChange,
+}: DatabaseDevToolsProps) {
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const clientRef = useRef<ReturnType<typeof createDevToolsClient> | null>(null);
 
   useEffect(() => {
     const client = createDevToolsClient({
       serverUrl: resolveServerUrl(serverUrl),
-      role: 'mobile',
+      role: DevToolsRole.MOBILE,
+      metadata: {
+        platform: Platform.OS,
+        appName: 'Database DevTools Example',
+      },
+      onConnectionStateChange: (state) => {
+        setConnectionState(state);
+        onConnectionStateChange?.(state);
+      },
     });
 
     clientRef.current = client;
@@ -46,11 +79,12 @@ export function DatabaseDevTools({ database: _database, serverUrl, style }: Data
       client.disconnect();
       clientRef.current = null;
     };
-  }, [serverUrl]);
+  }, [serverUrl, onConnectionStateChange]);
 
   return (
     <View style={[{ padding: 8 }, style]}>
       <Text>Database DevTools Loaded</Text>
+      <Text>{formatConnectionLabel(connectionState)}</Text>
     </View>
   );
 }

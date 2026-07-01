@@ -11,16 +11,35 @@ pnpm workspaces isolate publishable library code from demo applications.
 | `apps/example` | Minimal Expo app proving local workspace integration |
 | `docs/` | Human-readable documentation |
 
+## Communication topology
+
+```
+Browser ──WebSocket──► Inspector Server ◄──WebSocket── Mobile App
+```
+
+The Inspector Server is the hub. Browser and mobile never communicate directly.
+
 ## Package internals
 
 ```
 packages/database-devtools/src/
-├── cli/           # `npx database-devtools` entry
-├── client/        # WebSocket client (mobile + browser)
-├── components/    # `<DatabaseDevTools />` React Native UI
-├── server/        # Express + WebSocket hub
-└── types/         # Shared protocol types
+├── cli/              # `npx database-devtools` entry
+├── client/           # Reconnecting WebSocket client (mobile + browser)
+├── components/       # `<DatabaseDevTools />` React Native UI
+├── server/           # Express + WebSocket hub
+├── types/            # Shared protocol types
+└── utils/            # Logger, reconnect backoff, ID generation
 ```
+
+### Server modules
+
+| Module | Responsibility |
+|--------|----------------|
+| `connectionManager` | In-memory map of socket → client record (role, deviceId, timestamps) |
+| `deviceRegistry` | Derives `deviceStatus` snapshot from connection manager |
+| `messageRouter` | `sendToBrowser`, `sendToMobile`, `broadcastToBrowsers`, `broadcastToMobiles` |
+| `heartbeat` | Server-initiated ping/pong; terminates dead sockets |
+| `attachWebSocket` | Wires connection lifecycle to manager + router |
 
 ### Future adapter layer
 
@@ -28,9 +47,47 @@ The `database` prop on `<DatabaseDevTools />` will accept adapter instances. Ada
 
 ## WebSocket protocol
 
+All messages extend a shared base:
+
+```typescript
+interface DevToolsMessageBase {
+  type: MessageTypeValue;
+  timestamp: number;
+}
+```
+
+### Message types
+
+| Type | Direction | Purpose |
+|------|-----------|---------|
+| `register` | Client → Server | Assign role (`browser` or `mobile`); mobile sends `deviceId` + optional `metadata` |
+| `ping` | Server → Client | Heartbeat probe with `pingId` |
+| `pong` | Client → Server | Heartbeat response with matching `pingId` |
+| `deviceStatus` | Server → Client | Hub snapshot: browser/mobile counts and device lists |
+| `broadcast` | Server → Client | Generic envelope for future features |
+
+### Connection flow
+
 1. Client connects to `ws://host:3847/ws`
-2. Client sends `{ type: 'register', payload: { role: 'mobile' | 'browser' } }`
-3. Server tracks connections and broadcasts `{ type: 'deviceStatus', payload: { mobileConnected, browserConnected } }`
+2. Client sends `{ type: 'register', role: 'mobile' | 'browser', deviceId?, metadata? }`
+3. Server tracks the socket, logs connection, broadcasts `deviceStatus` to all clients
+4. Server sends `ping` every 30s; clients reply with `pong`
+5. On disconnect or heartbeat timeout, server removes client and rebroadcasts `deviceStatus`
+
+### deviceStatus payload
+
+```typescript
+{
+  browserCount: number;
+  mobileCount: number;
+  browsers: { connectionId, connectedAt }[];
+  mobiles: { deviceId, connectionId, connectedAt, metadata? }[];
+}
+```
+
+## Auto-reconnect
+
+Both mobile and browser clients use exponential backoff (1s base, 30s max, jitter). On unexpected disconnect they enter `reconnecting` state and re-send `register` on success.
 
 ## Why subpath exports?
 

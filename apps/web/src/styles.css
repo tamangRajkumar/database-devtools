@@ -57,7 +57,26 @@ h1 {
   color: #ff6b6b;
 }
 
-.mobile-status {
-  margin: 0;
+.status--reconnecting {
+  color: #f5a623;
+}
+
+.mobile-count {
+  margin: 0 0 0.75rem;
   color: #c5cad6;
+}
+
+.device-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #9aa3b8;
+}
+
+.device-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+}
+
+.device-meta {
+  color: #6b7280;
 }

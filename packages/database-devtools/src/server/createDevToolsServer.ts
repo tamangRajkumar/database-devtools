@@ -4,9 +4,14 @@ import {
   DEFAULT_DEVTOOLS_HOST,
   DEFAULT_DEVTOOLS_PORT,
   buildDevToolsHttpUrl,
+  buildDevToolsWsUrl,
 } from '../types/protocol.js';
+import { logger } from '../utils/logger.js';
 import { attachWebSocket } from './attachWebSocket.js';
+import { ConnectionManager } from './connectionManager.js';
 import { DeviceRegistry } from './deviceRegistry.js';
+import { Heartbeat } from './heartbeat.js';
+import { MessageRouter } from './messageRouter.js';
 
 export type DevToolsServerOptions = {
   host?: string;
@@ -16,7 +21,10 @@ export type DevToolsServerOptions = {
 export type DevToolsServer = {
   app: express.Express;
   httpServer: Server;
-  registry: DeviceRegistry;
+  connectionManager: ConnectionManager;
+  deviceRegistry: DeviceRegistry;
+  router: MessageRouter;
+  heartbeat: Heartbeat;
   close: () => Promise<void>;
 };
 
@@ -27,14 +35,17 @@ export async function createDevToolsServer(
   const port = options.port ?? DEFAULT_DEVTOOLS_PORT;
 
   const app = express();
-  const registry = new DeviceRegistry();
+  const connectionManager = new ConnectionManager();
+  const deviceRegistry = new DeviceRegistry(connectionManager);
+  const router = new MessageRouter(connectionManager, deviceRegistry);
+  const heartbeat = new Heartbeat(connectionManager, router);
 
   app.get('/health', (_request, response) => {
-    response.json({ ok: true, ...registry.snapshot() });
+    response.json({ ok: true, ...deviceRegistry.snapshot() });
   });
 
   const httpServer = createServer(app);
-  attachWebSocket(httpServer, registry);
+  attachWebSocket(httpServer, connectionManager, router, heartbeat);
 
   await new Promise<void>((resolve, reject) => {
     httpServer.once('error', reject);
@@ -43,16 +54,20 @@ export async function createDevToolsServer(
 
   const displayHost = host === '0.0.0.0' ? 'localhost' : host;
   const url = buildDevToolsHttpUrl(displayHost, port);
+  const wsUrl = buildDevToolsWsUrl(displayHost, port);
 
-  console.log(`[database-devtools] Server started at ${url}`);
-  console.log(`[database-devtools] WebSocket endpoint ws://${displayHost}:${port}/ws`);
+  logger.serverStarted(url, wsUrl);
 
   return {
     app,
     httpServer,
-    registry,
+    connectionManager,
+    deviceRegistry,
+    router,
+    heartbeat,
     close: () =>
       new Promise((resolve, reject) => {
+        heartbeat.stop();
         httpServer.close((error) => {
           if (error) {
             reject(error);
