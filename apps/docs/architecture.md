@@ -34,13 +34,7 @@ Adding Realm or DuckDB requires:
 2. New inspector package (`packages/inspectors/realm`)
 3. `register*()` call — no core protocol changes
 
-## Write protocol (edit mode)
-
-1. Browser sends `beginTransactionRequest` to the hub
-2. Hub forwards to the mobile device; adapter runs `BEGIN IMMEDIATE`
-3. Browser sends `writeRequest` messages (parameterized SQL)
-4. On **Commit**: `commitTransaction` → snapshot refresh
-5. On **Discard**: `rollbackTransaction`
+See [Custom adapters](./guides/custom-adapter.md).
 
 ## Security
 

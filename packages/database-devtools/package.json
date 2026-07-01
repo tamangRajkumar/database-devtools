@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "description": "Chrome DevTools-like experience for databases in React Native applications",
   "license": "MIT",
+  "author": "Database DevTools contributors",
+  "homepage": "https://github.com/yellowbooking/database-devtools#readme",
+  "bugs": "https://github.com/yellowbooking/database-devtools/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yellowbooking/database-devtools.git",
+    "directory": "packages/database-devtools"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -46,13 +57,13 @@
   },
   "files": [
     "dist",
-    "src"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx watch src/cli/index.ts",
-    "prepare": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -80,7 +91,8 @@
     "react": "19.1.0",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
   },
   "keywords": [
     "react-native",
@@ -88,9 +100,5 @@
     "database",
     "devtools",
     "debugging"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-org/database-devtools"
-  }
+  ]
 }

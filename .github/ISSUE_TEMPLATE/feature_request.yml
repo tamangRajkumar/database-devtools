@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an idea for Database DevTools
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions or workarounds?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Mobile / React Native
+        - Browser UI
+        - CLI / server
+        - SQLite adapter
+        - New database engine
+        - Documentation
+        - Other
+    validations:
+      required: true

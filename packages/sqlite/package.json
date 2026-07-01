@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "Expo SQLite adapter for Database DevTools",
   "license": "MIT",
+  "homepage": "https://github.com/yellowbooking/database-devtools#readme",
+  "bugs": "https://github.com/yellowbooking/database-devtools/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yellowbooking/database-devtools.git",
+    "directory": "packages/sqlite"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,11 +25,12 @@
   },
   "files": [
     "dist",
-    "src"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "database-devtools": "workspace:*",
@@ -29,6 +40,7 @@
     "database-devtools": "workspace:*",
     "expo-sqlite": "~16.0.10",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
   }
 }
