@@ -29,6 +29,18 @@ The web app (`apps/web`) is a Chrome DevTools-style shell for inspecting connect
 
 Start the CLI server first (`pnpm dev:cli`), then `pnpm dev:web`. Theme preference is stored in `localStorage` under `database-devtools-theme`.
 
+### One-click refresh
+
+Click **Refresh** in the top bar to pull a database snapshot from the selected mobile device:
+
+1. Browser sends `refreshRequest` to the hub
+2. Hub forwards `syncDatabase` to the phone
+3. Phone calls `database.exportSnapshot()` and uploads bytes via HTTP
+4. Hub notifies the browser with `databaseReady`
+5. Overview shows snapshot size and last-refreshed time
+
+Tables, Query, and Schema panels still use placeholder data until snapshot parsing is implemented.
+
 ## Quick start
 
 ```bash

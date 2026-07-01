@@ -3,6 +3,7 @@ import {
   createDevToolsClient,
   type ConnectionState,
 } from '../client/createDevToolsClient';
+import { handleSyncDatabase } from '../client/handleSyncDatabase';
 import { DevToolsContext } from '../hooks/useDevTools';
 import type { DatabaseAdapter } from '../types/adapter';
 import { DevToolsRole } from '../types/protocol';
@@ -30,10 +31,15 @@ export function DevToolsProvider({
   const metadata = useMemo(() => resolveDeviceMetadata(), []);
   const clientRef = useRef<ReturnType<typeof createDevToolsClient> | null>(null);
   const onConnectionStateChangeRef = useRef(onConnectionStateChange);
+  const databaseRef = useRef(database);
 
   useEffect(() => {
     onConnectionStateChangeRef.current = onConnectionStateChange;
   }, [onConnectionStateChange]);
+
+  useEffect(() => {
+    databaseRef.current = database;
+  }, [database]);
 
   useEffect(() => {
     const client = createDevToolsClient({
@@ -43,6 +49,15 @@ export function DevToolsProvider({
       onConnectionStateChange: (state) => {
         setConnectionState(state);
         onConnectionStateChangeRef.current?.(state);
+      },
+      onSyncDatabase: async (message) => {
+        try {
+          await handleSyncDatabase(databaseRef.current, message);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Database export or upload failed';
+          clientRef.current?.reportExportFailed(message.syncId, errorMessage);
+        }
       },
     });
 

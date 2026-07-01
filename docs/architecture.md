@@ -56,7 +56,7 @@ Development-only by default (`__DEV__`). Returns `null` in production builds.
 
 ### Database adapter layer
 
-The `database` prop accepts a `DatabaseAdapter` stub (`{ id, name }`). Future adapters (e.g. `@database-devtools/sqlite`) will implement this interface.
+The `database` prop accepts a `DatabaseAdapter` with `exportSnapshot()` for the refresh pipeline. Future adapters (e.g. `@database-devtools/sqlite`) will implement this interface.
 
 ## WebSocket protocol
 
@@ -78,6 +78,21 @@ interface DevToolsMessageBase {
 | `pong` | Client → Server | Heartbeat response with matching `pingId` |
 | `deviceStatus` | Server → Client | Hub snapshot: browser/mobile counts and device lists |
 | `broadcast` | Server → Client | Generic envelope for future features |
+| `refreshRequest` | Browser → Server | Start database sync for a `deviceId` |
+| `syncDatabase` | Server → Mobile | Export and upload snapshot to `uploadUrl` |
+| `syncStatus` | Server → Browser | Sync progress (`requested` → `exporting` → `uploading` → `ready`) |
+| `databaseReady` | Server → Browser | Snapshot available at `downloadUrl` |
+| `syncError` | Server → Browser | Sync failure with `code` and `message` |
+| `exportFailed` | Mobile → Server | Export or upload failed on device |
+
+### Database refresh flow
+
+```
+Browser ──refreshRequest──► Server ──syncDatabase──► Mobile
+Mobile ──POST /api/snapshots/:syncId──► Server ──databaseReady──► Browser
+```
+
+Snapshots are uploaded over HTTP (`application/octet-stream`, max 50 MB). Sync sessions time out after 60 seconds.
 
 ### Connection flow
 

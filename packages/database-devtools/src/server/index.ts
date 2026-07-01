@@ -6,3 +6,6 @@ export { DeviceRegistry } from './deviceRegistry';
 export { MessageRouter } from './messageRouter';
 export type { OutboundMessage } from './messageRouter';
 export { Heartbeat } from './heartbeat';
+export { RefreshCoordinator } from './refreshCoordinator';
+export { SyncSessionManager } from './syncSessionManager';
+export type { SyncSession } from './syncSessionManager';

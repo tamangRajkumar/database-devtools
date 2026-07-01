@@ -1,16 +1,27 @@
 import {
   buildDevToolsWsUrl,
-  createMessage,
   DEFAULT_DEVTOOLS_PORT,
   DevToolsRole,
+  isDatabaseReadyMessage,
   isDeviceStatusMessage,
   isPingMessage,
+  isSyncDatabaseMessage,
+  isSyncErrorMessage,
+  isSyncStatusMessage,
   MessageType,
+  type ClientMessage,
+  type DatabaseReadyMessage,
   type DeviceMetadata,
   type DeviceStatusPayload,
+  type ExportFailedMessage,
+  type PongMessage,
+  type RefreshRequestMessage,
   type RegisterMessage,
+  type SyncDatabaseMessage,
+  type SyncErrorMessage,
+  type SyncStatusMessage,
 } from '../types/protocol';
-import { generateDeviceId } from '../utils/ids';
+import { generateDeviceId, generateSyncId } from '../utils/ids';
 import { ReconnectScheduler } from '../utils/reconnect';
 
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -25,6 +36,10 @@ export type DevToolsClientOptions = {
   onDisconnect?: () => void;
   onConnectionStateChange?: (state: ConnectionState) => void;
   onDeviceStatus?: (status: DeviceStatusPayload) => void;
+  onSyncDatabase?: (message: SyncDatabaseMessage) => void;
+  onSyncStatus?: (message: SyncStatusMessage) => void;
+  onDatabaseReady?: (message: DatabaseReadyMessage) => void;
+  onSyncError?: (message: SyncErrorMessage) => void;
   onError?: (error: Error) => void;
 };
 
@@ -36,7 +51,16 @@ export type DevToolsClient = {
   getDeviceId: () => string | undefined;
   getServerUrl: () => string;
   setServerUrl: (url: string) => void;
+  send: (message: ClientMessageInput) => void;
+  requestRefresh: (deviceId: string) => string;
+  reportExportFailed: (syncId: string, message: string) => void;
 };
+
+type ClientMessageInput =
+  | Omit<RegisterMessage, 'timestamp'>
+  | Omit<PongMessage, 'timestamp'>
+  | Omit<RefreshRequestMessage, 'timestamp'>
+  | Omit<ExportFailedMessage, 'timestamp'>;
 
 export function createDevToolsClient(options: DevToolsClientOptions = {}): DevToolsClient {
   const role = options.role ?? DevToolsRole.MOBILE;
@@ -72,15 +96,56 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     },
   });
 
+  const send = (message: ClientMessageInput): void => {
+    if (!socket || socket.readyState !== WebSocketImpl.OPEN) {
+      return;
+    }
+
+    socket.send(JSON.stringify({ ...message, timestamp: Date.now() }));
+  };
+
   const sendRegister = (): void => {
-    const message = createMessage<RegisterMessage>({
+    send({
       type: MessageType.REGISTER,
       role,
       ...(deviceId ? { deviceId } : {}),
       ...(options.metadata ? { metadata: options.metadata } : {}),
     });
+  };
 
-    socket?.send(JSON.stringify(message));
+  const handleServerMessage = (parsed: unknown): void => {
+    if (isPingMessage(parsed)) {
+      send({
+        type: MessageType.PONG,
+        pingId: parsed.pingId,
+      });
+      return;
+    }
+
+    if (isDeviceStatusMessage(parsed)) {
+      deviceStatus = parsed.payload;
+      options.onDeviceStatus?.(parsed.payload);
+      return;
+    }
+
+    if (isSyncDatabaseMessage(parsed)) {
+      options.onSyncDatabase?.(parsed);
+      return;
+    }
+
+    if (isSyncStatusMessage(parsed)) {
+      options.onSyncStatus?.(parsed);
+      return;
+    }
+
+    if (isDatabaseReadyMessage(parsed)) {
+      options.onDatabaseReady?.(parsed);
+      return;
+    }
+
+    if (isSyncErrorMessage(parsed)) {
+      options.onSyncError?.(parsed);
+    }
   };
 
   const openSocket = (): void => {
@@ -111,22 +176,7 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
         return;
       }
 
-      if (isPingMessage(parsed)) {
-        socket?.send(
-          JSON.stringify(
-            createMessage({
-              type: MessageType.PONG,
-              pingId: parsed.pingId,
-            }),
-          ),
-        );
-        return;
-      }
-
-      if (isDeviceStatusMessage(parsed)) {
-        deviceStatus = parsed.payload;
-        options.onDeviceStatus?.(parsed.payload);
-      }
+      handleServerMessage(parsed);
     });
 
     socket.addEventListener('close', () => {
@@ -175,6 +225,26 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     }
   };
 
+  const requestRefresh = (targetDeviceId: string): string => {
+    const syncId = generateSyncId();
+
+    send({
+      type: MessageType.REFRESH_REQUEST,
+      syncId,
+      deviceId: targetDeviceId,
+    });
+
+    return syncId;
+  };
+
+  const reportExportFailed = (syncId: string, message: string): void => {
+    send({
+      type: MessageType.EXPORT_FAILED,
+      syncId,
+      message,
+    });
+  };
+
   return {
     connect,
     disconnect,
@@ -183,5 +253,8 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     getDeviceId: () => deviceId,
     getServerUrl: () => wsUrl,
     setServerUrl,
+    send,
+    requestRefresh,
+    reportExportFailed,
   };
 }

@@ -1,8 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { DatabaseDevTools } from 'database-devtools';
+import type { DatabaseAdapter } from 'database-devtools';
 
-const mockDb = { id: 'example', name: 'Example SQLite (stub)' };
+const mockDb: DatabaseAdapter = {
+  id: 'example',
+  name: 'Example SQLite (stub)',
+  async exportSnapshot() {
+    const payload = JSON.stringify({
+      adapter: 'example',
+      tables: ['users', 'bookings', 'sessions'],
+      exportedAt: Date.now(),
+    });
+
+    return new TextEncoder().encode(payload);
+  },
+};
 
 export default function App() {
   return (

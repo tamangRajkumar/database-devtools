@@ -46,6 +46,18 @@ export const logger = {
     log(RED, '✓', `Heartbeat timeout — removing ${connectionId}`);
   },
 
+  syncStarted(syncId: string, deviceId: string): void {
+    log(CYAN, '↻', `Sync started ${DIM}(${syncId} → ${deviceId})${RESET}`);
+  },
+
+  syncUploaded(syncId: string, bytes: number): void {
+    log(GREEN, '↻', `Snapshot uploaded ${DIM}(${syncId}, ${bytes} bytes)${RESET}`);
+  },
+
+  syncFailed(syncId: string, code: string, message: string): void {
+    log(RED, '↻', `Sync failed ${DIM}(${syncId}: ${code})${RESET} ${message}`);
+  },
+
   error(message: string): void {
     log(RED, '✗', message);
   },

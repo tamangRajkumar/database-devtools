@@ -6,8 +6,28 @@ function formatTimestamp(timestamp: number): string {
   return new Date(timestamp).toLocaleString();
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function OverviewPanel() {
-  const { connectionState, selectedDevice, deviceStatus, lastUpdatedAt } = useDevTools();
+  const {
+    connectionState,
+    selectedDevice,
+    deviceStatus,
+    lastUpdatedAt,
+    snapshotMeta,
+    lastSnapshotAt,
+    refreshState,
+  } = useDevTools();
 
   if (!selectedDevice) {
     return (
@@ -24,11 +44,12 @@ export function OverviewPanel() {
   }
 
   const metadata = selectedDevice.metadata;
+  const hasSnapshot = refreshState === 'ready' && snapshotMeta !== null;
 
   return (
     <section className="panel">
       <h2 className="panel__title">Overview</h2>
-      <PlaceholderBanner />
+      {!hasSnapshot && <PlaceholderBanner />}
 
       <div className="card-grid">
         <article className="card">
@@ -69,7 +90,31 @@ export function OverviewPanel() {
             </div>
           </dl>
         </article>
+
+        {hasSnapshot && snapshotMeta && (
+          <article className="card">
+            <h3 className="card__title">Database snapshot</h3>
+            <dl className="meta-list">
+              <div className="meta-list__row">
+                <dt>Size</dt>
+                <dd>{formatBytes(snapshotMeta.size)}</dd>
+              </div>
+              <div className="meta-list__row">
+                <dt>Refreshed at</dt>
+                <dd>{formatTimestamp(snapshotMeta.exportedAt)}</dd>
+              </div>
+              <div className="meta-list__row">
+                <dt>Sync ID</dt>
+                <dd className="mono">{snapshotMeta.syncId}</dd>
+              </div>
+            </dl>
+          </article>
+        )}
       </div>
+
+      {lastSnapshotAt && (
+        <p className="panel__footer">Last database refresh: {formatTimestamp(lastSnapshotAt)}</p>
+      )}
 
       {lastUpdatedAt && (
         <p className="panel__footer">Last status update: {formatTimestamp(lastUpdatedAt)}</p>

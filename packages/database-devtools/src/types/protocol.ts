@@ -13,6 +13,12 @@ export const MessageType = {
   PONG: 'pong',
   DEVICE_STATUS: 'deviceStatus',
   BROADCAST: 'broadcast',
+  REFRESH_REQUEST: 'refreshRequest',
+  SYNC_DATABASE: 'syncDatabase',
+  SYNC_STATUS: 'syncStatus',
+  DATABASE_READY: 'databaseReady',
+  SYNC_ERROR: 'syncError',
+  EXPORT_FAILED: 'exportFailed',
 } as const;
 
 export type MessageTypeValue = (typeof MessageType)[keyof typeof MessageType];
@@ -80,9 +86,85 @@ export interface BroadcastMessage extends DevToolsMessageBase {
   payload: unknown;
 }
 
-export type ClientMessage = RegisterMessage | PongMessage;
+export type SyncState =
+  | 'requested'
+  | 'exporting'
+  | 'uploading'
+  | 'ready'
+  | 'failed'
+  | 'timeout';
 
-export type ServerMessage = PingMessage | DeviceStatusMessage | BroadcastMessage;
+export type SyncErrorCode =
+  | 'DEVICE_OFFLINE'
+  | 'SYNC_IN_PROGRESS'
+  | 'EXPORT_FAILED'
+  | 'UPLOAD_FAILED'
+  | 'TIMEOUT'
+  | 'SNAPSHOT_NOT_FOUND'
+  | 'INVALID_REQUEST';
+
+/** Browser → Server: request a database snapshot from a mobile device. */
+export interface RefreshRequestMessage extends DevToolsMessageBase {
+  type: typeof MessageType.REFRESH_REQUEST;
+  syncId: string;
+  deviceId: string;
+}
+
+/** Server → Mobile: export database and upload to the given URL. */
+export interface SyncDatabaseMessage extends DevToolsMessageBase {
+  type: typeof MessageType.SYNC_DATABASE;
+  syncId: string;
+  uploadUrl: string;
+}
+
+/** Server → Browser: sync progress update. */
+export interface SyncStatusMessage extends DevToolsMessageBase {
+  type: typeof MessageType.SYNC_STATUS;
+  syncId: string;
+  deviceId: string;
+  state: SyncState;
+}
+
+/** Server → Browser: snapshot uploaded and ready to download. */
+export interface DatabaseReadyMessage extends DevToolsMessageBase {
+  type: typeof MessageType.DATABASE_READY;
+  syncId: string;
+  deviceId: string;
+  size: number;
+  exportedAt: number;
+  downloadUrl: string;
+}
+
+/** Server → Browser: sync failed. */
+export interface SyncErrorMessage extends DevToolsMessageBase {
+  type: typeof MessageType.SYNC_ERROR;
+  syncId: string;
+  deviceId?: string;
+  code: SyncErrorCode;
+  message: string;
+}
+
+/** Mobile → Server: export or upload failed on device. */
+export interface ExportFailedMessage extends DevToolsMessageBase {
+  type: typeof MessageType.EXPORT_FAILED;
+  syncId: string;
+  message: string;
+}
+
+export type ClientMessage =
+  | RegisterMessage
+  | PongMessage
+  | RefreshRequestMessage
+  | ExportFailedMessage;
+
+export type ServerMessage =
+  | PingMessage
+  | DeviceStatusMessage
+  | BroadcastMessage
+  | SyncDatabaseMessage
+  | SyncStatusMessage
+  | DatabaseReadyMessage
+  | SyncErrorMessage;
 
 export type DevToolsMessage = ClientMessage | ServerMessage;
 
@@ -95,6 +177,12 @@ export const DEFAULT_DEVTOOLS_HOST = '0.0.0.0';
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 
 export const HEARTBEAT_TIMEOUT_MS = 10_000;
+
+export const SNAPSHOT_API_PATH = '/api/snapshots';
+
+export const SYNC_TIMEOUT_MS = 60_000;
+
+export const MAX_SNAPSHOT_BYTES = 50 * 1024 * 1024;
 
 export function createMessage<T extends DevToolsMessageBase>(
   message: Omit<T, 'timestamp'>,
@@ -114,6 +202,20 @@ export function buildDevToolsWsUrl(
   port = DEFAULT_DEVTOOLS_PORT,
 ): string {
   return `ws://${host}:${port}${DEVTOOLS_WS_PATH}`;
+}
+
+export function buildSnapshotUrl(httpBaseUrl: string, syncId: string): string {
+  const base = httpBaseUrl.replace(/\/$/, '');
+  return `${base}${SNAPSHOT_API_PATH}/${syncId}`;
+}
+
+export function wsUrlToHttpUrl(wsUrl: string): string {
+  const url = new URL(wsUrl);
+  url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+  url.pathname = '';
+  url.search = '';
+  url.hash = '';
+  return url.toString().replace(/\/$/, '');
 }
 
 function hasMessageType(value: unknown): value is { type: string } {
@@ -140,8 +242,31 @@ export function isPongMessage(value: unknown): value is PongMessage {
   return typeof message.pingId === 'string';
 }
 
+export function isRefreshRequestMessage(value: unknown): value is RefreshRequestMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.REFRESH_REQUEST) {
+    return false;
+  }
+
+  const message = value as RefreshRequestMessage;
+  return typeof message.syncId === 'string' && typeof message.deviceId === 'string';
+}
+
+export function isExportFailedMessage(value: unknown): value is ExportFailedMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.EXPORT_FAILED) {
+    return false;
+  }
+
+  const message = value as ExportFailedMessage;
+  return typeof message.syncId === 'string' && typeof message.message === 'string';
+}
+
 export function isClientMessage(value: unknown): value is ClientMessage {
-  return isRegisterMessage(value) || isPongMessage(value);
+  return (
+    isRegisterMessage(value) ||
+    isPongMessage(value) ||
+    isRefreshRequestMessage(value) ||
+    isExportFailedMessage(value)
+  );
 }
 
 export function isPingMessage(value: unknown): value is PingMessage {
@@ -170,6 +295,60 @@ export function isBroadcastMessage(value: unknown): value is BroadcastMessage {
   return true;
 }
 
+export function isSyncDatabaseMessage(value: unknown): value is SyncDatabaseMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.SYNC_DATABASE) {
+    return false;
+  }
+
+  const message = value as SyncDatabaseMessage;
+  return typeof message.syncId === 'string' && typeof message.uploadUrl === 'string';
+}
+
+export function isSyncStatusMessage(value: unknown): value is SyncStatusMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.SYNC_STATUS) {
+    return false;
+  }
+
+  const message = value as SyncStatusMessage;
+  return (
+    typeof message.syncId === 'string' &&
+    typeof message.deviceId === 'string' &&
+    typeof message.state === 'string'
+  );
+}
+
+export function isDatabaseReadyMessage(value: unknown): value is DatabaseReadyMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.DATABASE_READY) {
+    return false;
+  }
+
+  const message = value as DatabaseReadyMessage;
+  return (
+    typeof message.syncId === 'string' &&
+    typeof message.deviceId === 'string' &&
+    typeof message.size === 'number' &&
+    typeof message.exportedAt === 'number' &&
+    typeof message.downloadUrl === 'string'
+  );
+}
+
+export function isSyncErrorMessage(value: unknown): value is SyncErrorMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.SYNC_ERROR) {
+    return false;
+  }
+
+  const message = value as SyncErrorMessage;
+  return typeof message.syncId === 'string' && typeof message.code === 'string';
+}
+
 export function isServerMessage(value: unknown): value is ServerMessage {
-  return isPingMessage(value) || isDeviceStatusMessage(value) || isBroadcastMessage(value);
+  return (
+    isPingMessage(value) ||
+    isDeviceStatusMessage(value) ||
+    isBroadcastMessage(value) ||
+    isSyncDatabaseMessage(value) ||
+    isSyncStatusMessage(value) ||
+    isDatabaseReadyMessage(value) ||
+    isSyncErrorMessage(value)
+  );
 }

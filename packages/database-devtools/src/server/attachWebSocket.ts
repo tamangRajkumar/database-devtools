@@ -3,13 +3,16 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import {
   DEVTOOLS_WS_PATH,
   DevToolsRole,
+  isExportFailedMessage,
   isPongMessage,
+  isRefreshRequestMessage,
   isRegisterMessage,
 } from '../types/protocol';
 import { logger } from '../utils/logger';
 import type { ConnectionManager } from './connectionManager';
 import type { Heartbeat } from './heartbeat';
 import type { MessageRouter } from './messageRouter';
+import type { RefreshCoordinator } from './refreshCoordinator';
 
 export type AttachWebSocketResult = {
   wss: WebSocketServer;
@@ -20,6 +23,7 @@ export function attachWebSocket(
   connectionManager: ConnectionManager,
   router: MessageRouter,
   heartbeat: Heartbeat,
+  refreshCoordinator: RefreshCoordinator,
 ): AttachWebSocketResult {
   const wss = new WebSocketServer({ server: httpServer, path: DEVTOOLS_WS_PATH });
 
@@ -76,6 +80,15 @@ export function attachWebSocket(
       if (isPongMessage(parsed)) {
         connectionManager.updateLastPong(socket);
         return;
+      }
+
+      if (isRefreshRequestMessage(parsed)) {
+        refreshCoordinator.handleRefreshRequest(socket, parsed);
+        return;
+      }
+
+      if (isExportFailedMessage(parsed)) {
+        refreshCoordinator.handleExportFailed(parsed.syncId, parsed.message);
       }
     });
 
