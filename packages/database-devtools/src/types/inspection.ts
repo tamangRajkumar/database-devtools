@@ -27,3 +27,20 @@ export type QueryError = {
   message: string;
   sql: string;
 };
+
+export type TablePageRequest = {
+  table: string;
+  page: number;
+  pageSize: number;
+  sortColumn?: string | null;
+  sortDir?: 'asc' | 'desc';
+  search?: string;
+};
+
+export type TablePageResult = {
+  columns: string[];
+  rows: (string | number | null)[][];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};

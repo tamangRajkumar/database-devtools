@@ -21,7 +21,7 @@ import {
   type MobileDeviceInfo,
   type SyncState,
 } from 'database-devtools/protocol';
-import type { QueryResult, SchemaTable, TableInfo } from 'database-devtools';
+import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult } from 'database-devtools';
 import { isSqliteDatabase, SqliteSession } from '../lib/sqliteSession';
 import { validateReadOnlySql } from '../lib/sqlSafety';
 
@@ -52,6 +52,7 @@ type DevToolsContextValue = {
   tables: TableInfo[];
   schema: SchemaTable[];
   executeQuery: (sql: string) => QueryResult;
+  fetchTablePage: (request: TablePageRequest) => TablePageResult;
   queryError: string | null;
   clearQueryError: () => void;
 };
@@ -252,6 +253,16 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const fetchTablePage = useCallback((request: TablePageRequest): TablePageResult => {
+    const session = sessionRef.current;
+
+    if (!session) {
+      throw new Error('No database loaded. Click Refresh to sync from the device.');
+    }
+
+    return session.fetchTablePage(request);
+  }, []);
+
   const clearQueryError = useCallback(() => {
     setQueryError(null);
   }, []);
@@ -274,6 +285,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       tables,
       schema,
       executeQuery,
+      fetchTablePage,
       queryError,
       clearQueryError,
     }),
@@ -293,6 +305,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       tables,
       schema,
       executeQuery,
+      fetchTablePage,
       queryError,
       clearQueryError,
     ],

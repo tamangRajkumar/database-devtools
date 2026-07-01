@@ -21,11 +21,13 @@ import { DatabaseDevTools } from 'database-devtools';
 
 The web app (`apps/web`) is a Chrome DevTools-style shell for inspecting connected mobile devices.
 
-- **Sidebar** — Overview, Tables, Query, Schema
+- **Sidebar** — Overview, Explorer, Query
+- **Explorer** — table list, schema viewer, paginated row grid, search, sorting, row detail drawer
 - **Top bar** — device selector, hub connection status, light/dark theme toggle
 - **Responsive** — sidebar collapses to a drawer on narrow screens
 - **Live data** — connection state and device metadata from the WebSocket hub
-- **Placeholder panels** — Tables, Query, and Schema show sample data until Phase 4 wires real database access
+- **Explorer** — browse tables, schema, paginated rows, search, and sorting after Refresh
+- **Query** — ad-hoc read-only SQL against the synced snapshot
 
 Start the CLI server first (`pnpm dev:cli`), then `pnpm dev:web`. Theme preference is stored in `localStorage` under `database-devtools-theme`.
 
@@ -55,7 +57,7 @@ const db = await SQLite.openDatabaseAsync('myapp.db');
 />
 ```
 
-After **Refresh**, the browser UI shows real tables, schema, and supports read-only SQL queries (`SELECT`, `PRAGMA`, `EXPLAIN`, `WITH`).
+After **Refresh**, the browser UI shows real tables, schema, and supports read-only SQL queries (`SELECT`, `PRAGMA`, `EXPLAIN`, `WITH`). Use **Explorer** to browse tables with pagination, search, sorting, and row details.
 
 ## Quick start
 

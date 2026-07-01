@@ -1,6 +1,14 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-import type { ColumnInfo, QueryResult, SchemaTable, TableInfo } from 'database-devtools';
+import type {
+  ColumnInfo,
+  QueryResult,
+  SchemaTable,
+  TableInfo,
+  TablePageRequest,
+  TablePageResult,
+} from 'database-devtools';
+import { buildSearchClause, quoteIdentifier, resolveSortColumn } from './tableQuery';
 
 let sqlModulePromise: Promise<SqlJsStatic> | null = null;
 
@@ -30,17 +38,17 @@ function normalizeCell(cell: unknown): string | number | null {
   return String(cell);
 }
 
-function quoteIdentifier(name: string): string {
-  return `"${name.replace(/"/g, '""')}"`;
-}
-
 export class SqliteSession {
+  private readonly tableNames = new Set<string>();
+
   private constructor(private readonly db: Database) {}
 
   static async open(bytes: ArrayBuffer): Promise<SqliteSession> {
     const SQL = await getSqlModule();
     const db = new SQL.Database(new Uint8Array(bytes));
-    return new SqliteSession(db);
+    const session = new SqliteSession(db);
+    session.listTables().forEach((table) => session.tableNames.add(table.name));
+    return session;
   }
 
   close(): void {
@@ -80,6 +88,55 @@ export class SqliteSession {
     }));
   }
 
+  getTableColumns(tableName: string): ColumnInfo[] {
+    this.assertKnownTable(tableName);
+    return this.readTableColumns(tableName);
+  }
+
+  fetchTablePage(request: TablePageRequest): TablePageResult {
+    this.assertKnownTable(request.table);
+
+    const columns = this.readTableColumns(request.table);
+    const columnNames = columns.map((column) => column.name);
+    const tableQuoted = quoteIdentifier(request.table);
+    const { clause, params } = buildSearchClause(columns, request.search);
+    const sortColumn = resolveSortColumn(columns, request.sortColumn);
+    const sortDir = request.sortDir === 'desc' ? 'DESC' : 'ASC';
+    const page = Math.max(1, request.page);
+    const pageSize = Math.max(1, request.pageSize);
+    const offset = (page - 1) * pageSize;
+
+    const countStatement = this.db.prepare(`SELECT COUNT(*) AS c FROM ${tableQuoted}${clause}`);
+    countStatement.bind(params);
+    countStatement.step();
+    const totalCount = Number(countStatement.get()[0] ?? 0);
+    countStatement.free();
+
+    const orderClause = sortColumn
+      ? ` ORDER BY ${quoteIdentifier(sortColumn)} ${sortDir}`
+      : '';
+    const dataStatement = this.db.prepare(
+      `SELECT * FROM ${tableQuoted}${clause}${orderClause} LIMIT ? OFFSET ?`,
+    );
+    dataStatement.bind([...params, pageSize, offset]);
+
+    const rows: (string | number | null)[][] = [];
+
+    while (dataStatement.step()) {
+      rows.push(columnNames.map((_, index) => normalizeCell(dataStatement.get()[index])));
+    }
+
+    dataStatement.free();
+
+    return {
+      columns: columnNames,
+      rows,
+      totalCount,
+      page,
+      pageSize,
+    };
+  }
+
   executeQuery(sql: string): QueryResult {
     const startedAt = performance.now();
     const resultSets = this.db.exec(sql);
@@ -104,7 +161,13 @@ export class SqliteSession {
     };
   }
 
-  private getTableColumns(tableName: string): ColumnInfo[] {
+  private assertKnownTable(tableName: string): void {
+    if (!this.tableNames.has(tableName)) {
+      throw new Error(`Unknown table: ${tableName}`);
+    }
+  }
+
+  private readTableColumns(tableName: string): ColumnInfo[] {
     const statement = this.db.prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`);
     const columns: ColumnInfo[] = [];
 
@@ -134,4 +197,30 @@ export class SqliteSession {
 export function isSqliteDatabase(bytes: ArrayBuffer): boolean {
   const header = new TextDecoder().decode(new Uint8Array(bytes, 0, 16));
   return header.startsWith('SQLite format 3');
+}
+
+export function filterTables(tables: TableInfo[], search: string): TableInfo[] {
+  const term = search.trim().toLowerCase();
+
+  if (!term) {
+    return tables;
+  }
+
+  return tables.filter((table) => table.name.toLowerCase().includes(term));
+}
+
+export function sortTables(
+  tables: TableInfo[],
+  sortBy: 'name' | 'rows',
+  direction: 'asc' | 'desc',
+): TableInfo[] {
+  const sorted = [...tables].sort((left, right) => {
+    if (sortBy === 'rows') {
+      return left.rowCount - right.rowCount;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  return direction === 'desc' ? sorted.reverse() : sorted;
 }

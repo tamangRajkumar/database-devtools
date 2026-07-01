@@ -64,9 +64,8 @@ The `database` prop accepts a `DatabaseAdapter` with `exportSnapshot()` and `dia
 
 After refresh, `apps/web` opens the downloaded snapshot in **sql.js** (WASM):
 
-- **Tables** — `sqlite_master` + row counts
-- **Schema** — `PRAGMA table_info`
-- **Query** — read-only SQL execution against the in-memory copy
+- **Explorer** — searchable table list, schema tab, paginated data grid with sort/search, row detail drawer
+- **Query** — ad-hoc read-only SQL
 
 ## WebSocket protocol
 

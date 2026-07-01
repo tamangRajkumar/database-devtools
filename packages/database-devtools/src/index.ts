@@ -62,6 +62,8 @@ export type {
   QueryResult,
   SchemaTable,
   TableInfo,
+  TablePageRequest,
+  TablePageResult,
 } from './types/inspection';
 export type { ConnectionState, DevToolsClient, DevToolsClientOptions } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
