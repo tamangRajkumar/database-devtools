@@ -12,14 +12,13 @@ The mobile app exports database snapshots over HTTP. The browser inspects snapsh
 
 | Package | Role |
 |---------|------|
-| `database-devtools` | RN component, CLI hub, client/server, adapter registry |
-| `@database-devtools/sqlite` | Mobile SQLite adapter (expo-sqlite) |
+| `database-devtools` | RN component, CLI hub, **built-in SQLite adapter**, adapter registry |
 | `@database-devtools/inspector-sqlite` | Browser snapshot inspector |
 
 ## Adapter resolution
 
 ```tsx
-<DatabaseDevTools database={db} />           // auto-detect
+<DatabaseDevTools database={db} />           // auto-detect SQLite
 <DatabaseDevTools database={db} type="sqlite" />
 <DatabaseDevTools database={db} adapter={custom} />
 ```
@@ -28,10 +27,10 @@ Priority: **custom adapter → explicit type → auto-detection → error**.
 
 ## Multi-database adapters
 
-Adding Realm or DuckDB requires:
+SQLite ships built into `database-devtools`. Adding Realm or DuckDB requires:
 
-1. New adapter package (`packages/adapters/realm`)
-2. New inspector package (`packages/inspectors/realm`)
+1. New optional adapter package
+2. Matching inspector package
 3. `register*()` call — no core protocol changes
 
 ## Write protocol (edit mode)

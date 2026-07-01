@@ -6,4 +6,4 @@ export {
   resetAdapterRegistry,
 } from './registry';
 export { resolveAdapter } from './resolveAdapter';
-export { registerBuiltInAdapters, markBuiltInAdaptersRegistered } from './registerBuiltins';
+export { registerBuiltInAdapters } from './registerBuiltins';

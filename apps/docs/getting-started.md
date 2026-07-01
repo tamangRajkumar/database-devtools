@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npm install database-devtools @database-devtools/sqlite
+npm install database-devtools expo-sqlite
 ```
 
 Peer dependencies: `react`, `react-native`, `expo-sqlite` (for the SQLite adapter).
@@ -13,7 +13,6 @@ Peer dependencies: `react`, `react-native`, `expo-sqlite` (for the SQLite adapte
 ```tsx
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import '@database-devtools/sqlite';
 
 const db = await SQLite.openDatabaseAsync('myapp.db');
 

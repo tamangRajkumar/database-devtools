@@ -11,6 +11,6 @@ describe('formatAdapterResolutionMessage', () => {
     expect(message).toContain('Unable to determine the database type');
     expect(message).toContain('SQLite');
     expect(message).toContain('type="sqlite"');
-    expect(message).toContain('npm install @database-devtools/sqlite');
+    expect(message).toContain('npm install expo-sqlite');
   });
 });

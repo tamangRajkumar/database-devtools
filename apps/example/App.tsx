@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import '@database-devtools/sqlite';
 
 async function seedDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(`

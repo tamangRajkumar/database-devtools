@@ -1,4 +1,9 @@
-import type { DeleteOperation, InsertOperation, UpdateOperation, WriteCellValue } from 'database-devtools';
+import type {
+  DeleteOperation,
+  InsertOperation,
+  UpdateOperation,
+  WriteCellValue,
+} from '../../types/write';
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 

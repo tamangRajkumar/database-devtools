@@ -108,3 +108,10 @@ export { fetchSnapshot } from './client/fetchSnapshot';
 export { handleSyncDatabase } from './client/handleSyncDatabase';
 export type { DatabaseDevToolsProps } from './components/DatabaseDevTools';
 export { DatabaseDevTools } from './components/DatabaseDevTools';
+export {
+  createExpoSqliteAdapter,
+  detectExpoSqlite,
+  registerSqliteAdapter,
+  sqliteAdapterDefinition,
+} from './adapters/sqlite';
+export type { CreateExpoSqliteAdapterOptions, ExpoSqliteDatabase } from './adapters/sqlite';

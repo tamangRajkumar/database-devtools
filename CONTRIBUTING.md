@@ -53,8 +53,7 @@ pnpm dev:example
 
 | Path | Published to npm |
 |------|------------------|
-| `packages/database-devtools` | `database-devtools` |
-| `packages/sqlite` | `@database-devtools/sqlite` |
+| `packages/database-devtools` | `database-devtools` (includes built-in SQLite adapter) |
 | `packages/inspector-sqlite` | `@database-devtools/inspector-sqlite` |
 | `apps/web`, `apps/example` | No (demos) |
 

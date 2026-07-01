@@ -1,12 +1,12 @@
-import type { WritableDatabaseAdapter, WriteOperation } from 'database-devtools';
+import type { WritableDatabaseAdapter } from '../../types/adapter';
+import type { WriteOperation } from '../../types/write';
+import { SQLITE_SNAPSHOT_MIME_TYPE } from '../../types/snapshot';
 import {
   buildDeleteSql,
   buildInsertSql,
   buildUpdateSql,
 } from './buildWriteSql';
 import type { ExpoSqliteDatabase } from './types';
-
-const SQLITE_SNAPSHOT_MIME_TYPE = 'application/x-sqlite3';
 
 export type CreateExpoSqliteAdapterOptions = {
   database: ExpoSqliteDatabase;

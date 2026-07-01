@@ -1,7 +1,3 @@
-declare module '@database-devtools/sqlite' {
-  export function registerSqliteAdapter(): void;
-}
-
 declare module '@database-devtools/inspector-sqlite' {
   export function registerSqliteInspector(options?: {
     wasmUrl?: string;

@@ -9,7 +9,7 @@ Inspect schema, browse rows, run SQL, and edit live data on connected devices �
 ## Install
 
 ```bash
-npm install database-devtools @database-devtools/sqlite
+npm install database-devtools expo-sqlite
 ```
 
 Peer dependencies: `react`, `react-native`, `expo-sqlite`.
@@ -21,7 +21,6 @@ Peer dependencies: `react`, `react-native`, `expo-sqlite`.
 ```tsx
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import '@database-devtools/sqlite';
 
 const db = await SQLite.openDatabaseAsync('myapp.db');
 
@@ -35,7 +34,7 @@ export function App() {
 }
 ```
 
-Pass the **raw database instance** — the SQLite adapter is auto-detected. Optional overrides:
+Pass the **raw expo-sqlite instance** — SQLite is auto-detected. Optional overrides:
 
 - `<DatabaseDevTools database={db} type="sqlite" />`
 - `<DatabaseDevTools database={db} adapter={customAdapter} />`
@@ -62,26 +61,26 @@ EXPO_PUBLIC_DATABASE_DEVTOOLS_URL=ws://192.168.1.10:3847/ws
 
 ## Features
 
-- **Zero-config SQLite** — auto-detect expo-sqlite via `@database-devtools/sqlite`
+- **Zero-config SQLite** — built-in expo-sqlite auto-detection
 - **Explorer** — tables, schema, paginated rows, search, row detail drawer
 - **SQL workspace** — read-only queries with history, favorites, export (TSV, CSV, JSON)
 - **Edit mode** — transactional inserts, updates, and deletes on the live device database
-- **Multi-database architecture** — adapter + inspector registry for future engines
+- **Multi-database architecture** — adapter registry for future engines (Realm, DuckDB, etc.)
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| [`database-devtools`](./packages/database-devtools) | RN component, CLI hub, WebSocket protocol, adapter registry |
-| [`@database-devtools/sqlite`](./packages/sqlite) | Mobile SQLite adapter (expo-sqlite) |
+| [`database-devtools`](./packages/database-devtools) | RN component, CLI hub, built-in SQLite adapter, WebSocket protocol |
 | [`@database-devtools/inspector-sqlite`](./packages/inspector-sqlite) | Browser snapshot inspector (sql.js) |
+
+Advanced SQLite wiring: `import { createExpoSqliteAdapter } from 'database-devtools/adapters/sqlite'`.
 
 ## Monorepo layout
 
 ```
 database-devtools/
-├── packages/database-devtools/   # Core publishable package
-├── packages/sqlite/              # SQLite adapter
+├── packages/database-devtools/   # Core publishable package (includes SQLite adapter)
 ├── packages/inspector-sqlite/    # Browser inspector
 ├── apps/web/                     # Browser UI
 ├── apps/example/                 # Expo example app

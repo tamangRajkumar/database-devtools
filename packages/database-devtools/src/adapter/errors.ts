@@ -36,8 +36,8 @@ export function formatAdapterResolutionMessage(
   if (hint === 'install-package') {
     lines.push(
       '',
-      'If you use SQLite, install the adapter package:',
-      '  npm install @database-devtools/sqlite',
+      'For SQLite, install expo-sqlite:',
+      '  npm install expo-sqlite',
     );
   }
 

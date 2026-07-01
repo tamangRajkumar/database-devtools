@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-npm install database-devtools @database-devtools/sqlite
+npm install database-devtools expo-sqlite
 ```
 
 ## Mobile app
@@ -13,12 +13,13 @@ npm install database-devtools @database-devtools/sqlite
 ```tsx
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import '@database-devtools/sqlite';
 
 const db = await SQLite.openDatabaseAsync('myapp.db');
 
 <DatabaseDevTools database={db} />
 ```
+
+SQLite is auto-detected — no extra adapter package required.
 
 ## Run the inspector
 

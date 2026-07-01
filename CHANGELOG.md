@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Multi-database adapter registry with auto-detection (`resolveAdapter`)
-- `@database-devtools/sqlite` mobile adapter with expo-sqlite detection
+- Built-in SQLite adapter for expo-sqlite (no separate package required)
 - `@database-devtools/inspector-sqlite` browser snapshot inspector
 - Explorer, SQL Workspace, and live edit mode in browser UI
 - GitHub Actions CI, Vitest test suite, and Changesets release workflow

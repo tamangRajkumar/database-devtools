@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npm install database-devtools @database-devtools/sqlite expo-sqlite
+npm install database-devtools expo-sqlite
 ```
 
 ## Usage
@@ -11,14 +11,13 @@ npm install database-devtools @database-devtools/sqlite expo-sqlite
 ```tsx
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import '@database-devtools/sqlite';
 
 const db = await SQLite.openDatabaseAsync('app.db');
 
 <DatabaseDevTools database={db} />
 ```
 
-Importing `@database-devtools/sqlite` registers the adapter for auto-detection.
+SQLite is **built in** and auto-detected from your expo-sqlite database instance.
 
 ## Explicit type override
 
@@ -31,7 +30,7 @@ Use when auto-detection fails or you want explicit configuration.
 ## Advanced: manual adapter
 
 ```tsx
-import { createExpoSqliteAdapter } from '@database-devtools/sqlite';
+import { createExpoSqliteAdapter } from 'database-devtools/adapters/sqlite';
 
 <DatabaseDevTools
   database={db}

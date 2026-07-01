@@ -61,6 +61,5 @@ jobs:
       - name: Pack publishable packages
         run: |
           pnpm --filter database-devtools pack --pack-destination /tmp/packs
-          pnpm --filter @database-devtools/sqlite pack --pack-destination /tmp/packs
           pnpm --filter @database-devtools/inspector-sqlite pack --pack-destination /tmp/packs
           ls -la /tmp/packs

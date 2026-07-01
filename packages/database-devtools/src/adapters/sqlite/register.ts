@@ -1,4 +1,5 @@
-import { getAdapterRegistry, type AdapterDefinition } from 'database-devtools/adapter';
+import { getAdapterRegistry } from '../../adapter/registry';
+import type { AdapterDefinition } from '../../adapter/types';
 import { createExpoSqliteAdapter } from './createExpoSqliteAdapter';
 import { detectExpoSqlite } from './detect';
 import type { ExpoSqliteDatabase } from './types';
