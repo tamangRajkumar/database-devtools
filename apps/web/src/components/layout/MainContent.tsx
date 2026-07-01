@@ -1,7 +1,7 @@
 import { NavItem } from '../../types/navigation';
 import { ExplorerPanel } from '../../panels/ExplorerPanel';
 import { OverviewPanel } from '../../panels/OverviewPanel';
-import { QueryPanel } from '../../panels/QueryPanel';
+import { SqlWorkspacePanel } from '../../panels/SqlWorkspacePanel';
 
 type MainContentProps = {
   activeNav: NavItem;
@@ -12,7 +12,7 @@ export function MainContent({ activeNav }: MainContentProps) {
     <main className="main-content">
       {activeNav === NavItem.OVERVIEW && <OverviewPanel />}
       {activeNav === NavItem.EXPLORER && <ExplorerPanel />}
-      {activeNav === NavItem.QUERY && <QueryPanel />}
+      {activeNav === NavItem.SQL && <SqlWorkspacePanel />}
     </main>
   );
 }

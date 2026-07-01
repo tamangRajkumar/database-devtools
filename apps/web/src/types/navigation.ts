@@ -1,7 +1,7 @@
 export const NavItem = {
   OVERVIEW: 'overview',
   EXPLORER: 'explorer',
-  QUERY: 'query',
+  SQL: 'sql',
 } as const;
 
 export type NavItem = (typeof NavItem)[keyof typeof NavItem];
@@ -14,5 +14,5 @@ export type NavEntry = {
 export const NAV_ITEMS: NavEntry[] = [
   { id: NavItem.OVERVIEW, label: 'Overview' },
   { id: NavItem.EXPLORER, label: 'Explorer' },
-  { id: NavItem.QUERY, label: 'Query' },
+  { id: NavItem.SQL, label: 'SQL' },
 ];

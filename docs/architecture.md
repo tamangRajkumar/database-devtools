@@ -65,7 +65,7 @@ The `database` prop accepts a `DatabaseAdapter` with `exportSnapshot()` and `dia
 After refresh, `apps/web` opens the downloaded snapshot in **sql.js** (WASM):
 
 - **Explorer** — searchable table list, schema tab, paginated data grid with sort/search, row detail drawer
-- **Query** — ad-hoc read-only SQL
+- **SQL Workspace** — CodeMirror SQL editor, history, favorites, TSV/CSV/JSON export
 
 ## WebSocket protocol
 

@@ -59,10 +59,6 @@ type DevToolsContextValue = {
 
 const DevToolsContext = createContext<DevToolsContextValue | null>(null);
 
-const DEFAULT_SQL = `SELECT name FROM sqlite_master
-WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-ORDER BY name`;
-
 export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatusPayload | null>(null);
@@ -324,4 +320,3 @@ export function useDevTools(): DevToolsContextValue {
   return context;
 }
 
-export { DEFAULT_SQL };
