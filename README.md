@@ -104,7 +104,9 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines and [CHANGELOG.md](./CHA
 |----------|---------|---------|
 | `DATABASE_DEVTOOLS_HOST` | `0.0.0.0` | CLI |
 | `DATABASE_DEVTOOLS_PORT` | `3847` | CLI |
-| `EXPO_PUBLIC_DATABASE_DEVTOOLS_URL` | `ws://localhost:3847/ws` | Mobile app |
+| `EXPO_PUBLIC_DATABASE_DEVTOOLS_URL` | Auto (see below) | Mobile app |
+
+**Default hub URL on mobile:** Android emulator uses `10.0.2.2`; physical devices use Metro's LAN IP; iOS simulator uses `localhost`. See [connection troubleshooting](./apps/docs/guides/connection-troubleshooting.md).
 
 ## Security
 

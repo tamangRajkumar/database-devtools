@@ -1,8 +1,19 @@
 import { buildDevToolsWsUrl, DEFAULT_DEVTOOLS_PORT } from '../types/protocol';
+import { resolveDevToolsHost } from './resolveDevToolsHost';
+
+export function normalizeServerUrl(url: string): string {
+  const trimmed = url.trim();
+
+  if (trimmed.startsWith('ws://') || trimmed.startsWith('wss://')) {
+    return trimmed;
+  }
+
+  return buildDevToolsWsUrl(trimmed.replace(/^https?:\/\//, ''), DEFAULT_DEVTOOLS_PORT);
+}
 
 export function resolveServerUrl(serverUrl?: string): string {
   if (serverUrl) {
-    return serverUrl;
+    return normalizeServerUrl(serverUrl);
   }
 
   const envUrl =
@@ -11,10 +22,8 @@ export function resolveServerUrl(serverUrl?: string): string {
       : undefined;
 
   if (envUrl) {
-    return envUrl.startsWith('ws://') || envUrl.startsWith('wss://')
-      ? envUrl
-      : buildDevToolsWsUrl(envUrl.replace(/^https?:\/\//, ''), DEFAULT_DEVTOOLS_PORT);
+    return normalizeServerUrl(envUrl);
   }
 
-  return buildDevToolsWsUrl('localhost', DEFAULT_DEVTOOLS_PORT);
+  return buildDevToolsWsUrl(resolveDevToolsHost(), DEFAULT_DEVTOOLS_PORT);
 }

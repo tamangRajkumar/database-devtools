@@ -70,6 +70,7 @@ export type DevToolsClient = {
   connect: () => void;
   disconnect: () => void;
   getConnectionState: () => ConnectionState;
+  getLastConnectionError: () => string | null;
   getDeviceStatus: () => DeviceStatusPayload | null;
   getDeviceId: () => string | undefined;
   getServerUrl: () => string;
@@ -112,6 +113,7 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
   let socket: InstanceType<typeof WebSocketImpl> | null = null;
   let deviceStatus: DeviceStatusPayload | null = null;
   let connectionState: ConnectionState = 'disconnected';
+  let lastConnectionError: string | null = null;
   let intentionalDisconnect = false;
   let transactionState: TransactionState = 'idle';
   let activeTransactionId: string | null = null;
@@ -339,6 +341,7 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
 
     socket.addEventListener('open', () => {
       reconnectScheduler.reset();
+      lastConnectionError = null;
       setConnectionState('connected');
       options.onConnect?.();
       sendRegister();
@@ -371,7 +374,9 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     });
 
     socket.addEventListener('error', () => {
-      options.onError?.(new Error(`WebSocket connection failed: ${wsUrl}`));
+      const error = new Error(`WebSocket connection failed: ${wsUrl}`);
+      lastConnectionError = error.message;
+      options.onError?.(error);
     });
   };
 
@@ -579,6 +584,7 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     connect,
     disconnect,
     getConnectionState: () => connectionState,
+    getLastConnectionError: () => lastConnectionError,
     getDeviceStatus: () => deviceStatus,
     getDeviceId: () => deviceId,
     getServerUrl: () => wsUrl,

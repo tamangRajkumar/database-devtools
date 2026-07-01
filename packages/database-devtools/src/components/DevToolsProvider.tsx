@@ -15,8 +15,9 @@ import { DevToolsContext } from '../hooks/useDevTools';
 import type { DatabaseAdapter } from '../types/adapter';
 import type { DatabaseKind } from '../types/kind';
 import { DevToolsRole } from '../types/protocol';
+import { getConnectionHint } from '../utils/resolveDevToolsHost';
 import { resolveDeviceMetadata } from '../utils/resolveDeviceMetadata';
-import { resolveServerUrl } from '../utils/resolveServerUrl';
+import { normalizeServerUrl, resolveServerUrl } from '../utils/resolveServerUrl';
 
 export type DevToolsProviderProps = {
   children: ReactNode;
@@ -36,6 +37,7 @@ export function DevToolsProvider({
   onConnectionStateChange,
 }: DevToolsProviderProps) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState(() => resolveServerUrl(initialServerUrl));
   const [deviceId, setDeviceId] = useState<string | undefined>();
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -97,9 +99,15 @@ export function DevToolsProvider({
       serverUrl,
       role: DevToolsRole.MOBILE,
       metadata,
+      onConnect: () => {
+        setConnectionError(null);
+      },
       onConnectionStateChange: (state) => {
         setConnectionState(state);
         onConnectionStateChangeRef.current?.(state);
+      },
+      onError: (error) => {
+        setConnectionError(error.message);
       },
       onSyncDatabase: async (message) => {
         try {
@@ -175,12 +183,17 @@ export function DevToolsProvider({
   }, []);
 
   const reconnect = useCallback((url: string) => {
-    setServerUrl(url);
+    setConnectionError(null);
+    setServerUrl(normalizeServerUrl(url));
   }, []);
+
+  const connectionHint = useMemo(() => getConnectionHint(serverUrl), [serverUrl]);
 
   const value = useMemo(
     () => ({
       connectionState,
+      connectionError,
+      connectionHint,
       deviceId,
       serverUrl,
       metadata,
@@ -193,6 +206,8 @@ export function DevToolsProvider({
     }),
     [
       connectionState,
+      connectionError,
+      connectionHint,
       deviceId,
       serverUrl,
       metadata,

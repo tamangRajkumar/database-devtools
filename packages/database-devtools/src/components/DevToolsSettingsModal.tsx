@@ -16,6 +16,8 @@ export function DevToolsSettingsModal() {
     settingsVisible,
     closeSettings,
     connectionState,
+    connectionError,
+    connectionHint,
     deviceId,
     serverUrl,
     metadata,
@@ -60,6 +62,18 @@ export function DevToolsSettingsModal() {
             <Section title="Connection">
               <ConnectionStatusBadge state={connectionState} />
               <InfoRow label="Server URL" value={serverUrl} mono />
+              {connectionError ? (
+                <Text style={styles.errorText}>{connectionError}</Text>
+              ) : null}
+              {connectionHint ? (
+                <Text style={styles.hintText}>{connectionHint}</Text>
+              ) : null}
+              {connectionState === 'reconnecting' ? (
+                <Text style={styles.hintText}>
+                  Ensure the inspector hub is running (pnpm dev:cli) and the URL reaches your
+                  development machine — not the phone itself.
+                </Text>
+              ) : null}
             </Section>
 
             <Section title="Device">
@@ -80,7 +94,7 @@ export function DevToolsSettingsModal() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 onChangeText={setDraftUrl}
-                placeholder="ws://localhost:3847/ws"
+                placeholder="ws://10.0.2.2:3847/ws"
                 style={styles.input}
                 value={draftUrl}
               />
@@ -236,5 +250,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#dc2626',
     marginBottom: 8,
+  },
+  hintText: {
+    fontSize: 12,
+    color: '#b45309',
+    lineHeight: 18,
   },
 });

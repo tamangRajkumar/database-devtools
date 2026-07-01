@@ -5,6 +5,8 @@ import type { DeviceMetadata } from '../types/protocol';
 
 export type DevToolsContextValue = {
   connectionState: ConnectionState;
+  connectionError: string | null;
+  connectionHint: string | null;
   deviceId: string | undefined;
   serverUrl: string;
   metadata: DeviceMetadata;

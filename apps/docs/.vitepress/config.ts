@@ -23,6 +23,7 @@ export default defineConfig({
         items: [
           { text: 'Expo SQLite', link: '/guides/expo-sqlite' },
           { text: 'Editing data', link: '/guides/editing' },
+          { text: 'Connection troubleshooting', link: '/guides/connection-troubleshooting' },
           { text: 'Custom adapters', link: '/guides/custom-adapter' },
         ],
       },

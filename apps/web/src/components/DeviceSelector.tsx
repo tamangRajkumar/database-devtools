@@ -8,8 +8,20 @@ function truncateId(id: string): string {
   return `${id.slice(0, 10)}…${id.slice(-6)}`;
 }
 
+function getEmptyLabel(connectionState: string): string {
+  if (connectionState === 'connected') {
+    return 'Waiting for mobile device…';
+  }
+
+  if (connectionState === 'reconnecting' || connectionState === 'connecting') {
+    return 'Connecting to hub…';
+  }
+
+  return 'Hub disconnected — start pnpm dev:cli';
+}
+
 export function DeviceSelector() {
-  const { deviceStatus, selectedDeviceId, setSelectedDeviceId } = useDevTools();
+  const { connectionState, deviceStatus, selectedDeviceId, setSelectedDeviceId } = useDevTools();
   const mobiles = deviceStatus?.mobiles ?? [];
   const disabled = mobiles.length === 0;
 
@@ -24,9 +36,10 @@ export function DeviceSelector() {
         disabled={disabled}
         value={selectedDeviceId ?? ''}
         onChange={(event) => setSelectedDeviceId(event.target.value || null)}
+        title={disabled ? getEmptyLabel(connectionState) : undefined}
       >
         {disabled ? (
-          <option value="">No devices connected</option>
+          <option value="">{getEmptyLabel(connectionState)}</option>
         ) : (
           mobiles.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
