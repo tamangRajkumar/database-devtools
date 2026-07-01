@@ -55,6 +55,14 @@ export {
 } from './types/protocol';
 
 export type { DatabaseAdapter } from './types/adapter';
+export type { DatabaseDialect } from './types/dialect';
+export type {
+  ColumnInfo,
+  QueryError,
+  QueryResult,
+  SchemaTable,
+  TableInfo,
+} from './types/inspection';
 export type { ConnectionState, DevToolsClient, DevToolsClientOptions } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
 export { fetchSnapshot } from './client/fetchSnapshot';

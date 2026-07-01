@@ -21,6 +21,9 @@ import {
   type MobileDeviceInfo,
   type SyncState,
 } from 'database-devtools/protocol';
+import type { QueryResult, SchemaTable, TableInfo } from 'database-devtools';
+import { isSqliteDatabase, SqliteSession } from '../lib/sqliteSession';
+import { validateReadOnlySql } from '../lib/sqlSafety';
 
 export type RefreshState = 'idle' | 'refreshing' | 'ready' | 'error';
 
@@ -45,9 +48,19 @@ type DevToolsContextValue = {
   lastSnapshotAt: number | null;
   refreshError: string | null;
   refresh: () => void;
+  hasDatabase: boolean;
+  tables: TableInfo[];
+  schema: SchemaTable[];
+  executeQuery: (sql: string) => QueryResult;
+  queryError: string | null;
+  clearQueryError: () => void;
 };
 
 const DevToolsContext = createContext<DevToolsContextValue | null>(null);
+
+const DEFAULT_SQL = `SELECT name FROM sqlite_master
+WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+ORDER BY name`;
 
 export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
@@ -59,20 +72,60 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [snapshotMeta, setSnapshotMeta] = useState<SnapshotMeta | null>(null);
   const [lastSnapshotAt, setLastSnapshotAt] = useState<number | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [tables, setTables] = useState<TableInfo[]>([]);
+  const [schema, setSchema] = useState<SchemaTable[]>([]);
+  const [queryError, setQueryError] = useState<string | null>(null);
+  const [databaseLoaded, setDatabaseLoaded] = useState(false);
 
   const clientRef = useRef<DevToolsClient | null>(null);
   const activeSyncIdRef = useRef<string | null>(null);
+  const sessionRef = useRef<SqliteSession | null>(null);
+
+  const closeSession = useCallback(() => {
+    sessionRef.current?.close();
+    sessionRef.current = null;
+    setTables([]);
+    setSchema([]);
+    setDatabaseLoaded(false);
+  }, []);
+
+  const openSnapshot = useCallback(async (bytes: ArrayBuffer) => {
+    closeSession();
+
+    if (!isSqliteDatabase(bytes)) {
+      throw new Error('Snapshot is not a valid SQLite database file');
+    }
+
+    const session = await SqliteSession.open(bytes);
+    sessionRef.current = session;
+    setTables(session.listTables());
+    setSchema(session.getSchema());
+    setDatabaseLoaded(true);
+  }, [closeSession]);
 
   const handleDatabaseReady = useCallback(async (message: DatabaseReadyMessage) => {
     if (activeSyncIdRef.current && message.syncId !== activeSyncIdRef.current) {
       return;
     }
 
+    let bytes: ArrayBuffer;
+
     try {
-      await fetchSnapshot(message.downloadUrl);
+      bytes = await fetchSnapshot(message.downloadUrl);
     } catch {
       setRefreshState('error');
       setRefreshError('Snapshot uploaded but download failed');
+      activeSyncIdRef.current = null;
+      return;
+    }
+
+    try {
+      await openSnapshot(bytes);
+    } catch (error) {
+      setRefreshState('error');
+      setRefreshError(
+        error instanceof Error ? error.message : 'Failed to open SQLite snapshot',
+      );
       activeSyncIdRef.current = null;
       return;
     }
@@ -88,8 +141,9 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setRefreshState('ready');
     setSyncState('ready');
     setRefreshError(null);
+    setQueryError(null);
     activeSyncIdRef.current = null;
-  }, []);
+  }, [openSnapshot]);
 
   useEffect(() => {
     const client = createDevToolsClient({
@@ -125,14 +179,18 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     return () => {
       client.disconnect();
       clientRef.current = null;
+      closeSession();
     };
-  }, [handleDatabaseReady]);
+  }, [handleDatabaseReady, closeSession]);
 
   useEffect(() => {
     const mobiles = deviceStatus?.mobiles ?? [];
 
     if (mobiles.length === 0) {
       setSelectedDeviceId(null);
+      closeSession();
+      setSnapshotMeta(null);
+      setRefreshState('idle');
       return;
     }
 
@@ -141,7 +199,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     if (!selectedDeviceId || !stillConnected) {
       setSelectedDeviceId(mobiles[0]?.deviceId ?? null);
     }
-  }, [deviceStatus, selectedDeviceId]);
+  }, [deviceStatus, selectedDeviceId, closeSession]);
 
   const selectedDevice = useMemo(() => {
     if (!selectedDeviceId || !deviceStatus) {
@@ -173,7 +231,30 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setRefreshState('refreshing');
     setSyncState('requested');
     setRefreshError(null);
+    setQueryError(null);
   }, [selectedDeviceId, refreshState, connectionState]);
+
+  const executeQuery = useCallback((sql: string): QueryResult => {
+    const session = sessionRef.current;
+
+    if (!session) {
+      throw new Error('No database loaded. Click Refresh to sync from the device.');
+    }
+
+    try {
+      validateReadOnlySql(sql);
+      setQueryError(null);
+      return session.executeQuery(sql);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Query failed';
+      setQueryError(message);
+      throw error;
+    }
+  }, []);
+
+  const clearQueryError = useCallback(() => {
+    setQueryError(null);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -189,6 +270,12 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       lastSnapshotAt,
       refreshError,
       refresh,
+      hasDatabase: databaseLoaded,
+      tables,
+      schema,
+      executeQuery,
+      queryError,
+      clearQueryError,
     }),
     [
       connectionState,
@@ -202,6 +289,12 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       lastSnapshotAt,
       refreshError,
       refresh,
+      databaseLoaded,
+      tables,
+      schema,
+      executeQuery,
+      queryError,
+      clearQueryError,
     ],
   );
 
@@ -217,3 +310,5 @@ export function useDevTools(): DevToolsContextValue {
 
   return context;
 }
+
+export { DEFAULT_SQL };

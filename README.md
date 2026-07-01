@@ -37,9 +37,25 @@ Click **Refresh** in the top bar to pull a database snapshot from the selected m
 2. Hub forwards `syncDatabase` to the phone
 3. Phone calls `database.exportSnapshot()` and uploads bytes via HTTP
 4. Hub notifies the browser with `databaseReady`
-5. Overview shows snapshot size and last-refreshed time
+5. Browser opens the snapshot with **sql.js** for inspection
 
-Tables, Query, and Schema panels still use placeholder data until snapshot parsing is implemented.
+### SQLite integration
+
+Use `@database-devtools/sqlite` with expo-sqlite:
+
+```tsx
+import * as SQLite from 'expo-sqlite';
+import { DatabaseDevTools } from 'database-devtools';
+import { createExpoSqliteAdapter } from '@database-devtools/sqlite';
+
+const db = await SQLite.openDatabaseAsync('myapp.db');
+
+<DatabaseDevTools
+  database={createExpoSqliteAdapter({ database: db, name: 'myapp.db' })}
+/>
+```
+
+After **Refresh**, the browser UI shows real tables, schema, and supports read-only SQL queries (`SELECT`, `PRAGMA`, `EXPLAIN`, `WITH`).
 
 ## Quick start
 

@@ -1,28 +1,89 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
 import type { DatabaseAdapter } from 'database-devtools';
+import { createExpoSqliteAdapter } from '@database-devtools/sqlite';
 
-const mockDb: DatabaseAdapter = {
-  id: 'example',
-  name: 'Example SQLite (stub)',
-  async exportSnapshot() {
-    const payload = JSON.stringify({
-      adapter: 'example',
-      tables: ['users', 'bookings', 'sessions'],
-      exportedAt: Date.now(),
-    });
+async function seedDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    PRAGMA journal_mode = WAL;
 
-    return new TextEncoder().encode(payload);
-  },
-};
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS bookings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      booked_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    INSERT OR IGNORE INTO users (id, email, name) VALUES
+      (1, 'ada@example.com', 'Ada Lovelace'),
+      (2, 'grace@example.com', 'Grace Hopper');
+
+    INSERT OR IGNORE INTO bookings (id, user_id, title, status) VALUES
+      (1, 1, 'Conference keynote', 'confirmed'),
+      (2, 1, 'Workshop', 'pending'),
+      (3, 2, 'Team offsite', 'confirmed');
+  `);
+}
 
 export default function App() {
+  const [adapter, setAdapter] = useState<DatabaseAdapter | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function init() {
+      try {
+        const db = await SQLite.openDatabaseAsync('devtools-example.db');
+        await seedDatabase(db);
+
+        if (!active) {
+          return;
+        }
+
+        setAdapter(
+          createExpoSqliteAdapter({
+            database: db,
+            name: 'devtools-example.db',
+          }),
+        );
+      } catch (initError) {
+        if (!active) {
+          return;
+        }
+
+        setError(initError instanceof Error ? initError.message : 'Failed to open database');
+      }
+    }
+
+    void init();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My App</Text>
-      <Text style={styles.subtitle}>Tap the DB button to open DevTools settings</Text>
-      <DatabaseDevTools database={mockDb} />
+      <Text style={styles.subtitle}>Tap the DB button, then Refresh in the browser DevTools</Text>
+
+      {error && <Text style={styles.error}>{error}</Text>}
+      {!adapter && !error && <ActivityIndicator size="large" />}
+
+      {adapter && <DatabaseDevTools database={adapter} />}
       <StatusBar style="auto" />
     </View>
   );
@@ -44,6 +105,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  error: {
+    fontSize: 14,
+    color: '#dc2626',
     textAlign: 'center',
   },
 });

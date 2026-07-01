@@ -26,7 +26,8 @@ export function OverviewPanel() {
     lastUpdatedAt,
     snapshotMeta,
     lastSnapshotAt,
-    refreshState,
+    hasDatabase,
+    tables,
   } = useDevTools();
 
   if (!selectedDevice) {
@@ -44,12 +45,11 @@ export function OverviewPanel() {
   }
 
   const metadata = selectedDevice.metadata;
-  const hasSnapshot = refreshState === 'ready' && snapshotMeta !== null;
 
   return (
     <section className="panel">
       <h2 className="panel__title">Overview</h2>
-      {!hasSnapshot && <PlaceholderBanner />}
+      {!hasDatabase && <PlaceholderBanner message="Click Refresh to sync the SQLite database from the device." />}
 
       <div className="card-grid">
         <article className="card">
@@ -91,10 +91,18 @@ export function OverviewPanel() {
           </dl>
         </article>
 
-        {hasSnapshot && snapshotMeta && (
+        {hasDatabase && snapshotMeta && (
           <article className="card">
-            <h3 className="card__title">Database snapshot</h3>
+            <h3 className="card__title">SQLite database</h3>
             <dl className="meta-list">
+              <div className="meta-list__row">
+                <dt>Dialect</dt>
+                <dd>sqlite</dd>
+              </div>
+              <div className="meta-list__row">
+                <dt>Tables</dt>
+                <dd>{tables.length}</dd>
+              </div>
               <div className="meta-list__row">
                 <dt>Size</dt>
                 <dd>{formatBytes(snapshotMeta.size)}</dd>

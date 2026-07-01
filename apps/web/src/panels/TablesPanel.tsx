@@ -1,9 +1,8 @@
-import { PLACEHOLDER_TABLES } from '../data/placeholders';
 import { useDevTools } from '../context/DevToolsContext';
 import { PlaceholderBanner } from '../components/PlaceholderBanner';
 
 export function TablesPanel() {
-  const { selectedDevice } = useDevTools();
+  const { selectedDevice, hasDatabase, tables } = useDevTools();
 
   if (!selectedDevice) {
     return (
@@ -21,26 +20,35 @@ export function TablesPanel() {
     <section className="panel">
       <h2 className="panel__title">Tables</h2>
       <p className="panel__subtitle mono">{selectedDevice.deviceId}</p>
-      <PlaceholderBanner />
+      {!hasDatabase && <PlaceholderBanner message="Click Refresh to load tables from the device database." />}
 
-      <div className="data-table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Table</th>
-              <th>Rows</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PLACEHOLDER_TABLES.map((table) => (
-              <tr key={table.name}>
-                <td className="mono">{table.name}</td>
-                <td>{table.rowCount.toLocaleString()}</td>
+      {hasDatabase && tables.length === 0 && (
+        <div className="empty-state">
+          <p className="empty-state__title">No tables</p>
+          <p className="empty-state__text">This database has no user tables.</p>
+        </div>
+      )}
+
+      {hasDatabase && tables.length > 0 && (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Rows</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {tables.map((table) => (
+                <tr key={table.name}>
+                  <td className="mono">{table.name}</td>
+                  <td>{table.rowCount.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }

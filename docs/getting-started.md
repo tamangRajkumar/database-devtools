@@ -44,14 +44,22 @@ pnpm build
 ## Package usage (React Native)
 
 ```tsx
+import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
+import { createExpoSqliteAdapter } from '@database-devtools/sqlite';
+
+const db = await SQLite.openDatabaseAsync('myapp.db');
 
 export function App() {
-  return <DatabaseDevTools />;
+  return (
+    <DatabaseDevTools
+      database={createExpoSqliteAdapter({ database: db, name: 'myapp.db' })}
+    />
+  );
 }
 ```
 
-The `database` prop is reserved for future adapters (SQLite, Realm, DuckDB, custom).
+In the browser DevTools UI, click **Refresh** to sync the database, then inspect tables, schema, and run read-only SQL.
 
 ## CLI usage
 
@@ -73,3 +81,4 @@ pnpm --filter database-devtools dev
 | `database-devtools/client` | WebSocket client (browser-safe) |
 | `database-devtools/server` | Programmatic server creation |
 | `database-devtools/protocol` | Shared message types |
+| `@database-devtools/sqlite` | Expo SQLite adapter (`createExpoSqliteAdapter`) |

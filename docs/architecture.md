@@ -56,7 +56,17 @@ Development-only by default (`__DEV__`). Returns `null` in production builds.
 
 ### Database adapter layer
 
-The `database` prop accepts a `DatabaseAdapter` with `exportSnapshot()` for the refresh pipeline. Future adapters (e.g. `@database-devtools/sqlite`) will implement this interface.
+The `database` prop accepts a `DatabaseAdapter` with `exportSnapshot()` and `dialect: 'sqlite'`.
+
+`@database-devtools/sqlite` provides `createExpoSqliteAdapter()` using expo-sqlite's `serializeAsync()` for consistent exports.
+
+### Browser inspection (sql.js)
+
+After refresh, `apps/web` opens the downloaded snapshot in **sql.js** (WASM):
+
+- **Tables** — `sqlite_master` + row counts
+- **Schema** — `PRAGMA table_info`
+- **Query** — read-only SQL execution against the in-memory copy
 
 ## WebSocket protocol
 
