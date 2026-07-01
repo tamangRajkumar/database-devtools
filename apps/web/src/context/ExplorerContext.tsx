@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { ColumnInfo, TablePageResult } from 'database-devtools';
-import { filterTables, sortTables } from '../lib/sqliteSession';
+import { filterTables, sortTables } from '@database-devtools/inspector-sqlite';
 import { useDevTools } from './DevToolsContext';
 
 export type ExplorerView = 'data' | 'schema';

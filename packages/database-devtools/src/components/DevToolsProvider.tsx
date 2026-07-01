@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { resolveAdapter } from '../adapter/resolveAdapter';
 import {
   createDevToolsClient,
   type ConnectionState,
@@ -12,13 +13,16 @@ import {
 } from '../client/handleWriteOperations';
 import { DevToolsContext } from '../hooks/useDevTools';
 import type { DatabaseAdapter } from '../types/adapter';
+import type { DatabaseKind } from '../types/kind';
 import { DevToolsRole } from '../types/protocol';
 import { resolveDeviceMetadata } from '../utils/resolveDeviceMetadata';
 import { resolveServerUrl } from '../utils/resolveServerUrl';
 
 export type DevToolsProviderProps = {
   children: ReactNode;
-  database?: DatabaseAdapter;
+  database?: unknown;
+  type?: DatabaseKind;
+  adapter?: DatabaseAdapter;
   serverUrl?: string;
   onConnectionStateChange?: (state: ConnectionState) => void;
 };
@@ -26,6 +30,8 @@ export type DevToolsProviderProps = {
 export function DevToolsProvider({
   children,
   database,
+  type,
+  adapter: explicitAdapter,
   serverUrl: initialServerUrl,
   onConnectionStateChange,
 }: DevToolsProviderProps) {
@@ -33,19 +39,58 @@ export function DevToolsProvider({
   const [serverUrl, setServerUrl] = useState(() => resolveServerUrl(initialServerUrl));
   const [deviceId, setDeviceId] = useState<string | undefined>();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [resolvedAdapter, setResolvedAdapter] = useState<DatabaseAdapter | undefined>(explicitAdapter);
+  const [adapterError, setAdapterError] = useState<string | null>(null);
 
   const metadata = useMemo(() => resolveDeviceMetadata(), []);
   const clientRef = useRef<ReturnType<typeof createDevToolsClient> | null>(null);
   const onConnectionStateChangeRef = useRef(onConnectionStateChange);
-  const databaseRef = useRef(database);
+  const databaseRef = useRef(resolvedAdapter);
 
   useEffect(() => {
     onConnectionStateChangeRef.current = onConnectionStateChange;
   }, [onConnectionStateChange]);
 
   useEffect(() => {
-    databaseRef.current = database;
-  }, [database]);
+    let cancelled = false;
+
+    async function resolveDatabaseAdapter(): Promise<void> {
+      if (explicitAdapter) {
+        setResolvedAdapter(explicitAdapter);
+        setAdapterError(null);
+        return;
+      }
+
+      if (!database) {
+        setResolvedAdapter(undefined);
+        setAdapterError(null);
+        return;
+      }
+
+      try {
+        const nextAdapter = await resolveAdapter(database, { type });
+        if (!cancelled) {
+          setResolvedAdapter(nextAdapter);
+          setAdapterError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setResolvedAdapter(undefined);
+          setAdapterError(error instanceof Error ? error.message : 'Failed to resolve database adapter');
+        }
+      }
+    }
+
+    void resolveDatabaseAdapter();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [database, type, explicitAdapter]);
+
+  useEffect(() => {
+    databaseRef.current = resolvedAdapter;
+  }, [resolvedAdapter]);
 
   useEffect(() => {
     const client = createDevToolsClient({
@@ -139,7 +184,8 @@ export function DevToolsProvider({
       deviceId,
       serverUrl,
       metadata,
-      database,
+      database: resolvedAdapter,
+      adapterError,
       settingsVisible,
       openSettings,
       closeSettings,
@@ -150,7 +196,8 @@ export function DevToolsProvider({
       deviceId,
       serverUrl,
       metadata,
-      database,
+      resolvedAdapter,
+      adapterError,
       settingsVisible,
       openSettings,
       closeSettings,

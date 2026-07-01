@@ -6,6 +6,6 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ['database-devtools', 'database-devtools/adapter', 'expo-sqlite'],
+  external: ['database-devtools', 'database-devtools/inspector', 'sql.js'],
   treeshake: true,
 });

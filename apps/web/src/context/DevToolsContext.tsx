@@ -15,6 +15,7 @@ import {
   type DevToolsClient,
   type TransactionState,
 } from 'database-devtools/client';
+import { createInspectorForSnapshot, type DatabaseInspector } from 'database-devtools/inspector';
 import {
   DevToolsRole,
   type DatabaseReadyMessage,
@@ -23,7 +24,6 @@ import {
   type SyncState,
 } from 'database-devtools/protocol';
 import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult, WriteOperation } from 'database-devtools';
-import { isSqliteDatabase, SqliteSession } from '../lib/sqliteSession';
 import { validateReadOnlySql } from '../lib/sqlSafety';
 
 export type RefreshState = 'idle' | 'refreshing' | 'ready' | 'error';
@@ -34,6 +34,8 @@ export type SnapshotMeta = {
   size: number;
   exportedAt: number;
   downloadUrl: string;
+  kind: string;
+  mimeType: string;
 };
 
 type DevToolsContextValue = {
@@ -83,27 +85,28 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
 
   const clientRef = useRef<DevToolsClient | null>(null);
   const activeSyncIdRef = useRef<string | null>(null);
-  const sessionRef = useRef<SqliteSession | null>(null);
+  const inspectorRef = useRef<DatabaseInspector | null>(null);
 
   const closeSession = useCallback(() => {
-    sessionRef.current?.close();
-    sessionRef.current = null;
+    inspectorRef.current?.close();
+    inspectorRef.current = null;
     setTables([]);
     setSchema([]);
     setDatabaseLoaded(false);
   }, []);
 
-  const openSnapshot = useCallback(async (bytes: ArrayBuffer) => {
+  const openSnapshot = useCallback(async (bytes: ArrayBuffer, kind: string, mimeType: string) => {
     closeSession();
 
-    if (!isSqliteDatabase(bytes)) {
-      throw new Error('Snapshot is not a valid SQLite database file');
-    }
+    const inspector = await createInspectorForSnapshot({
+      kind,
+      mimeType,
+      bytes,
+    });
 
-    const session = await SqliteSession.open(bytes);
-    sessionRef.current = session;
-    setTables(session.listTables());
-    setSchema(session.getSchema());
+    inspectorRef.current = inspector;
+    setTables(inspector.listTables());
+    setSchema(inspector.getSchema());
     setDatabaseLoaded(true);
   }, [closeSession]);
 
@@ -124,7 +127,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      await openSnapshot(bytes);
+      await openSnapshot(bytes, message.kind, message.mimeType);
     } catch (error) {
       setRefreshState('error');
       setRefreshError(
@@ -140,6 +143,8 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       size: message.size,
       exportedAt: message.exportedAt,
       downloadUrl: message.downloadUrl,
+      kind: message.kind,
+      mimeType: message.mimeType,
     });
     setLastSnapshotAt(message.exportedAt);
     setRefreshState('ready');
@@ -240,16 +245,16 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   }, [selectedDeviceId, refreshState, connectionState]);
 
   const executeQuery = useCallback((sql: string): QueryResult => {
-    const session = sessionRef.current;
+    const inspector = inspectorRef.current;
 
-    if (!session) {
+    if (!inspector) {
       throw new Error('No database loaded. Click Refresh to sync from the device.');
     }
 
     try {
       validateReadOnlySql(sql);
       setQueryError(null);
-      return session.executeQuery(sql);
+      return inspector.executeQuery(sql);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Query failed';
       setQueryError(message);
@@ -258,13 +263,13 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchTablePage = useCallback((request: TablePageRequest): TablePageResult => {
-    const session = sessionRef.current;
+    const inspector = inspectorRef.current;
 
-    if (!session) {
+    if (!inspector) {
       throw new Error('No database loaded. Click Refresh to sync from the device.');
     }
 
-    return session.fetchTablePage(request);
+    return inspector.fetchTablePage(request);
   }, []);
 
   const clearQueryError = useCallback(() => {

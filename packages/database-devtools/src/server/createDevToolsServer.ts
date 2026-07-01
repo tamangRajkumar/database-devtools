@@ -8,6 +8,7 @@ import {
   buildDevToolsHttpUrl,
   buildDevToolsWsUrl,
 } from '../types/protocol';
+import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER } from '../types/snapshot';
 import { logger } from '../utils/logger';
 import { attachWebSocket } from './attachWebSocket';
 import { ConnectionManager } from './connectionManager';
@@ -78,7 +79,13 @@ export async function createDevToolsServer(
         return;
       }
 
-      const result = refreshCoordinator.handleSnapshotUpload(syncId, body);
+      const kindHeader = request.header(SNAPSHOT_KIND_HEADER);
+      const mimeHeader = request.header(SNAPSHOT_MIME_HEADER);
+
+      const result = refreshCoordinator.handleSnapshotUpload(syncId, body, {
+        kind: typeof kindHeader === 'string' ? kindHeader : undefined,
+        mimeType: typeof mimeHeader === 'string' ? mimeHeader : undefined,
+      });
 
       if (!result.ok) {
         response.status(result.code === 'SNAPSHOT_NOT_FOUND' ? 404 : 400).json({

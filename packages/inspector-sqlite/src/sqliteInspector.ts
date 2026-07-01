@@ -1,5 +1,3 @@
-import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
-import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import type {
   ColumnInfo,
   QueryResult,
@@ -8,19 +6,12 @@ import type {
   TablePageRequest,
   TablePageResult,
 } from 'database-devtools';
+import type { DatabaseInspector } from 'database-devtools/inspector';
+import type { SnapshotExport } from 'database-devtools';
+import { getSqlModule } from './sqlModule';
 import { buildSearchClause, quoteIdentifier, resolveSortColumn } from './tableQuery';
 
-let sqlModulePromise: Promise<SqlJsStatic> | null = null;
-
-async function getSqlModule(): Promise<SqlJsStatic> {
-  if (!sqlModulePromise) {
-    sqlModulePromise = initSqlJs({
-      locateFile: () => sqlWasmUrl,
-    });
-  }
-
-  return sqlModulePromise;
-}
+const SQLITE_SNAPSHOT_MIME_TYPE = 'application/x-sqlite3';
 
 function normalizeCell(cell: unknown): string | number | null {
   if (cell === null || cell === undefined) {
@@ -41,7 +32,7 @@ function normalizeCell(cell: unknown): string | number | null {
 export class SqliteSession {
   private readonly tableNames = new Set<string>();
 
-  private constructor(private readonly db: Database) {}
+  private constructor(private readonly db: import('sql.js').Database) {}
 
   static async open(bytes: ArrayBuffer): Promise<SqliteSession> {
     const SQL = await getSqlModule();
@@ -224,3 +215,67 @@ export function sortTables(
 
   return direction === 'desc' ? sorted.reverse() : sorted;
 }
+
+export class SqliteInspector implements DatabaseInspector {
+  readonly kind = 'sqlite' as const;
+  readonly capabilities = {
+    explorer: true,
+    schemaView: true,
+    tableData: true,
+    sqlWorkspace: true,
+  };
+
+  private session: SqliteSession | null = null;
+
+  async open(snapshot: SnapshotExport | ArrayBuffer): Promise<void> {
+    this.close();
+
+    const bytes: ArrayBuffer =
+      snapshot instanceof ArrayBuffer
+        ? snapshot
+        : new Uint8Array(snapshot.bytes).buffer;
+
+    if (!isSqliteDatabase(bytes)) {
+      throw new Error('Snapshot is not a valid SQLite database file');
+    }
+
+    this.session = await SqliteSession.open(bytes);
+  }
+
+  close(): void {
+    this.session?.close();
+    this.session = null;
+  }
+
+  listTables(): TableInfo[] {
+    return this.requireSession().listTables();
+  }
+
+  getSchema(): SchemaTable[] {
+    return this.requireSession().getSchema();
+  }
+
+  fetchTablePage(request: TablePageRequest): TablePageResult {
+    return this.requireSession().fetchTablePage(request);
+  }
+
+  executeQuery(sql: string): QueryResult {
+    return this.requireSession().executeQuery(sql);
+  }
+
+  private requireSession(): SqliteSession {
+    if (!this.session) {
+      throw new Error('No database loaded');
+    }
+
+    return this.session;
+  }
+}
+
+export const sqliteInspectorDefinition = {
+  kind: 'sqlite' as const,
+  displayName: 'SQLite',
+  mimeTypes: [SQLITE_SNAPSHOT_MIME_TYPE, 'application/octet-stream'],
+  canOpenBytes: isSqliteDatabase,
+  createInspector: () => new SqliteInspector(),
+};

@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import type { DatabaseAdapter } from 'database-devtools';
-import { createExpoSqliteAdapter } from '@database-devtools/sqlite';
+import '@database-devtools/sqlite';
 
 async function seedDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(`
@@ -38,7 +37,7 @@ async function seedDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
 }
 
 export default function App() {
-  const [adapter, setAdapter] = useState<DatabaseAdapter | null>(null);
+  const [database, setDatabase] = useState<SQLite.SQLiteDatabase | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,12 +52,7 @@ export default function App() {
           return;
         }
 
-        setAdapter(
-          createExpoSqliteAdapter({
-            database: db,
-            name: 'devtools-example.db',
-          }),
-        );
+        setDatabase(db);
       } catch (initError) {
         if (!active) {
           return;
@@ -81,9 +75,9 @@ export default function App() {
       <Text style={styles.subtitle}>Tap the DB button, then Refresh in the browser DevTools</Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
-      {!adapter && !error && <ActivityIndicator size="large" />}
+      {!database && !error && <ActivityIndicator size="large" />}
 
-      {adapter && <DatabaseDevTools database={adapter} />}
+      {database && <DatabaseDevTools database={database} />}
       <StatusBar style="auto" />
     </View>
   );

@@ -54,8 +54,26 @@ export {
   wsUrlToHttpUrl,
 } from './types/protocol';
 
-export type { DatabaseAdapter } from './types/adapter';
+export type { AdapterCapabilities, InspectorCapabilities } from './types/capabilities';
+export type {
+  DatabaseAdapter,
+  WritableDatabaseAdapter,
+  WriteResult,
+  EditableDatabaseAdapter,
+} from './types/adapter';
+export {
+  isWritableDatabaseAdapter,
+  isEditableDatabaseAdapter,
+} from './types/adapter';
 export type { DatabaseDialect } from './types/dialect';
+export type { DatabaseKind } from './types/kind';
+export { DATABASE_DEVTOOLS_KIND, readDatabaseKindMarker } from './types/kind';
+export type { SnapshotExport } from './types/snapshot';
+export {
+  SNAPSHOT_KIND_HEADER,
+  SNAPSHOT_MIME_HEADER,
+  SQLITE_SNAPSHOT_MIME_TYPE,
+} from './types/snapshot';
 export type {
   ColumnInfo,
   QueryError,
@@ -65,7 +83,26 @@ export type {
   TablePageRequest,
   TablePageResult,
 } from './types/inspection';
-export type { ConnectionState, DevToolsClient, DevToolsClientOptions } from './client/createDevToolsClient';
+export type {
+  DeleteOperation,
+  InsertOperation,
+  UpdateOperation,
+  WriteCellValue,
+  WriteOperation,
+} from './types/write';
+export type { AdapterDefinition, ResolveAdapterOptions } from './adapter/types';
+export {
+  AdapterResolutionError,
+  getAdapterRegistry,
+  registerBuiltInAdapters,
+  resolveAdapter,
+} from './adapter';
+export type { DatabaseInspector, InspectorDefinition } from './inspector/types';
+export {
+  createInspectorForSnapshot,
+  getInspectorRegistry,
+} from './inspector';
+export type { ConnectionState, DevToolsClient, DevToolsClientOptions, TransactionState } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
 export { fetchSnapshot } from './client/fetchSnapshot';
 export { handleSyncDatabase } from './client/handleSyncDatabase';

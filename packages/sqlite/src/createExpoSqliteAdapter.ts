@@ -1,11 +1,12 @@
-import type { EditableDatabaseAdapter } from 'database-devtools';
-import type { WriteOperation } from 'database-devtools';
+import type { WritableDatabaseAdapter, WriteOperation } from 'database-devtools';
 import {
   buildDeleteSql,
   buildInsertSql,
   buildUpdateSql,
 } from './buildWriteSql';
 import type { ExpoSqliteDatabase } from './types';
+
+const SQLITE_SNAPSHOT_MIME_TYPE = 'application/x-sqlite3';
 
 export type CreateExpoSqliteAdapterOptions = {
   database: ExpoSqliteDatabase;
@@ -15,7 +16,7 @@ export type CreateExpoSqliteAdapterOptions = {
 
 export function createExpoSqliteAdapter(
   options: CreateExpoSqliteAdapterOptions,
-): EditableDatabaseAdapter {
+): WritableDatabaseAdapter {
   const { database } = options;
   let inTransaction = false;
 
@@ -25,7 +26,7 @@ export function createExpoSqliteAdapter(
     }
   };
 
-  const runWrite = async (operation: WriteOperation): Promise<{ rowsAffected: number }> => {
+  const runWrite = async (operation: WriteOperation) => {
     assertTransaction();
 
     let sql: string;
@@ -61,14 +62,31 @@ export function createExpoSqliteAdapter(
   };
 
   return {
+    kind: 'sqlite',
+    dialect: 'sqlite',
     id: options.id ?? database.databasePath,
     name: options.name ?? 'SQLite',
-    dialect: 'sqlite',
-    async exportSnapshot(): Promise<Uint8Array> {
-      await database.execAsync('PRAGMA wal_checkpoint(FULL)');
-      return database.serializeAsync();
+    capabilities: {
+      exportSnapshot: true,
+      executeQuery: false,
+      listTables: false,
+      getSchema: false,
+      transactionalWrites: true,
+      observeChanges: false,
+      importSnapshot: false,
     },
-    async beginTransaction(): Promise<void> {
+    async exportSnapshot() {
+      await database.execAsync('PRAGMA wal_checkpoint(FULL)');
+      const bytes = await database.serializeAsync();
+
+      return {
+        bytes,
+        mimeType: SQLITE_SNAPSHOT_MIME_TYPE,
+        kind: 'sqlite' as const,
+        exportedAt: Date.now(),
+      };
+    },
+    async beginTransaction() {
       if (inTransaction) {
         throw new Error('Transaction already open');
       }
@@ -76,7 +94,7 @@ export function createExpoSqliteAdapter(
       await database.execAsync('BEGIN IMMEDIATE');
       inTransaction = true;
     },
-    async commitTransaction(): Promise<void> {
+    async commitTransaction() {
       assertTransaction();
 
       try {
@@ -85,7 +103,7 @@ export function createExpoSqliteAdapter(
         inTransaction = false;
       }
     },
-    async rollbackTransaction(): Promise<void> {
+    async rollbackTransaction() {
       if (!inTransaction) {
         return;
       }

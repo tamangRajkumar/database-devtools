@@ -1,5 +1,6 @@
 import type { DatabaseAdapter } from '../types/adapter';
 import type { SyncDatabaseMessage } from '../types/protocol';
+import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER } from '../types/snapshot';
 
 export async function handleSyncDatabase(
   database: DatabaseAdapter | undefined,
@@ -15,8 +16,10 @@ export async function handleSyncDatabase(
     method: 'POST',
     headers: {
       'Content-Type': 'application/octet-stream',
+      [SNAPSHOT_KIND_HEADER]: snapshot.kind,
+      [SNAPSHOT_MIME_HEADER]: snapshot.mimeType,
     },
-    body: new Blob([snapshot as BlobPart]),
+    body: new Blob([snapshot.bytes as BlobPart]),
   });
 
   if (!response.ok) {

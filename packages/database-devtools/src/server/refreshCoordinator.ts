@@ -87,7 +87,11 @@ export class RefreshCoordinator {
     this.failSession(syncId, 'EXPORT_FAILED', errorMessage);
   }
 
-  handleSnapshotUpload(syncId: string, body: Buffer): { ok: true } | { ok: false; code: SyncErrorCode } {
+  handleSnapshotUpload(
+    syncId: string,
+    body: Buffer,
+    metadata?: { kind?: string; mimeType?: string },
+  ): { ok: true } | { ok: false; code: SyncErrorCode } {
     const session = this.sessions.get(syncId);
 
     if (!session) {
@@ -101,7 +105,7 @@ export class RefreshCoordinator {
     this.sendSyncStatus(session.browserConnectionId, syncId, session.deviceId, 'uploading');
     this.sessions.setState(syncId, 'uploading');
 
-    const stored = this.sessions.storeSnapshot(syncId, body);
+    const stored = this.sessions.storeSnapshot(syncId, body, metadata);
 
     if (!stored?.snapshot || stored.exportedAt === undefined) {
       this.failSession(syncId, 'UPLOAD_FAILED', 'Failed to store snapshot');
@@ -120,6 +124,8 @@ export class RefreshCoordinator {
       size: body.byteLength,
       exportedAt: stored.exportedAt,
       downloadUrl,
+      kind: stored.kind ?? 'sqlite',
+      mimeType: stored.mimeType ?? 'application/x-sqlite3',
     });
 
     this.router.sendToBrowser(session.browserConnectionId, readyMessage);

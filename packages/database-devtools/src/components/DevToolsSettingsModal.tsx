@@ -20,6 +20,7 @@ export function DevToolsSettingsModal() {
     serverUrl,
     metadata,
     database,
+    adapterError,
     reconnect,
   } = useDevTools();
 
@@ -89,13 +90,19 @@ export function DevToolsSettingsModal() {
             </Section>
 
             <Section title="Database">
+              {adapterError ? (
+                <Text style={styles.errorText}>{adapterError}</Text>
+              ) : null}
               {database ? (
                 <>
+                  <InfoRow label="Kind" value={database.kind} />
                   <InfoRow label="Name" value={database.name} />
                   <InfoRow label="ID" value={database.id} mono />
                 </>
               ) : (
-                <Text style={styles.placeholder}>No adapter connected</Text>
+                <Text style={styles.placeholder}>
+                  {adapterError ? 'Adapter not connected' : 'No adapter connected'}
+                </Text>
               )}
             </Section>
           </ScrollView>
@@ -224,5 +231,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94a3b8',
     fontStyle: 'italic',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#dc2626',
+    marginBottom: 8,
   },
 });

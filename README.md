@@ -8,11 +8,16 @@ This repository is a **pnpm workspace monorepo**. Phase 2 provides the real-time
 
 ```tsx
 import { DatabaseDevTools } from 'database-devtools';
+import '@database-devtools/sqlite';
+
+const db = await SQLite.openDatabaseAsync('myapp.db');
 
 <DatabaseDevTools database={db} />
 ```
 
-- Renders only in development (`__DEV__`) by default
+- Pass the **raw database instance** — the SQLite adapter is auto-detected
+- Optional override: `<DatabaseDevTools database={db} type="sqlite" />`
+- Advanced: `<DatabaseDevTools database={db} adapter={customAdapter} />`
 - Floating **DB** button with connection status dot
 - Tap to open settings modal (device ID, server URL, reconnect)
 - Pass `enabled={false}` to disable in dev, or `enabled={true}` to force on
@@ -41,21 +46,31 @@ Click **Refresh** in the top bar to pull a database snapshot from the selected m
 
 ### SQLite integration
 
-Use `@database-devtools/sqlite` with expo-sqlite:
+Install the SQLite adapter package and pass the raw expo-sqlite instance:
 
 ```tsx
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
-import { createExpoSqliteAdapter } from '@database-devtools/sqlite';
+import '@database-devtools/sqlite';
 
 const db = await SQLite.openDatabaseAsync('myapp.db');
 
-<DatabaseDevTools
-  database={createExpoSqliteAdapter({ database: db, name: 'myapp.db' })}
-/>
+<DatabaseDevTools database={db} />
 ```
 
-After **Refresh**, the browser UI shows real tables, schema, and supports read-only SQL queries (`SELECT`, `PRAGMA`, `EXPLAIN`, `WITH`). Use **Explorer** to browse tables; use **SQL** for the full query console with history and export.
+Adapter resolution order: **custom `adapter` prop → explicit `type` prop → auto-detection**.
+
+After **Refresh**, the browser opens the snapshot via `@database-devtools/inspector-sqlite` (sql.js) and supports read-only SQL queries (`SELECT`, `PRAGMA`, `EXPLAIN`, `WITH`). Use **Explorer** to browse tables; use **SQL** for the full query console with history and export.
+
+### Multi-database architecture
+
+| Package | Role |
+|---------|------|
+| `database-devtools` | Core UI, protocol, adapter registry, inspector registry |
+| `@database-devtools/sqlite` | Mobile SQLite adapter (auto-detect expo-sqlite) |
+| `@database-devtools/inspector-sqlite` | Browser snapshot inspector (sql.js) |
+
+Adding Realm or DuckDB later requires a new adapter package + inspector package — no core changes.
 
 ### Editing (live device writes)
 
@@ -66,7 +81,7 @@ Edits run on the **live database on the mobile device**, not on the browser snap
 3. In **Explorer**, insert rows, edit row fields in the drawer, or delete rows
 4. **Commit** applies changes and refreshes the snapshot; **Discard** rolls back
 
-Writes use parameterized SQL on the device via `EditableDatabaseAdapter` (`beginTransaction`, `commitTransaction`, `rollbackTransaction`, `executeWrite`). The expo-sqlite adapter implements this with `BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK`.
+Writes use parameterized SQL on the device via `WritableDatabaseAdapter` (`beginTransaction`, `commitTransaction`, `rollbackTransaction`, `executeWrite`). The expo-sqlite adapter implements this with `BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK`.
 
 ## Quick start
 

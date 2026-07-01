@@ -2,7 +2,7 @@
   "name": "database-devtools-workspace",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter database-devtools build && pnpm --filter @database-devtools/sqlite build",
+    "build": "pnpm --filter database-devtools build && pnpm --filter @database-devtools/sqlite build && pnpm --filter @database-devtools/inspector-sqlite build",
     "dev:cli": "pnpm --filter database-devtools dev",
     "dev:web": "pnpm --filter @database-devtools/web dev",
     "dev:example": "pnpm --filter @database-devtools/example start",

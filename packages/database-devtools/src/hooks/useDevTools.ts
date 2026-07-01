@@ -9,6 +9,7 @@ export type DevToolsContextValue = {
   serverUrl: string;
   metadata: DeviceMetadata;
   database: DatabaseAdapter | undefined;
+  adapterError: string | null;
   settingsVisible: boolean;
   openSettings: () => void;
   closeSettings: () => void;

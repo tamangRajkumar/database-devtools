@@ -148,6 +148,8 @@ export interface DatabaseReadyMessage extends DevToolsMessageBase {
   size: number;
   exportedAt: number;
   downloadUrl: string;
+  kind: string;
+  mimeType: string;
 }
 
 /** Server → Browser: sync failed. */
@@ -556,7 +558,9 @@ export function isDatabaseReadyMessage(value: unknown): value is DatabaseReadyMe
     typeof message.deviceId === 'string' &&
     typeof message.size === 'number' &&
     typeof message.exportedAt === 'number' &&
-    typeof message.downloadUrl === 'string'
+    typeof message.downloadUrl === 'string' &&
+    typeof message.kind === 'string' &&
+    typeof message.mimeType === 'string'
   );
 }
 

@@ -7,6 +7,8 @@ export type SyncSession = {
   browserConnectionId: string;
   state: SyncState;
   snapshot?: Buffer;
+  kind?: string;
+  mimeType?: string;
   createdAt: number;
   exportedAt?: number;
 };
@@ -58,7 +60,11 @@ export class SyncSessionManager {
     return session;
   }
 
-  storeSnapshot(syncId: string, snapshot: Buffer): SyncSession | undefined {
+  storeSnapshot(
+    syncId: string,
+    snapshot: Buffer,
+    metadata?: { kind?: string; mimeType?: string },
+  ): SyncSession | undefined {
     const session = this.sessions.get(syncId);
 
     if (!session) {
@@ -68,6 +74,8 @@ export class SyncSessionManager {
     session.snapshot = snapshot;
     session.exportedAt = Date.now();
     session.state = 'ready';
+    session.kind = metadata?.kind ?? session.kind;
+    session.mimeType = metadata?.mimeType ?? session.mimeType;
     return session;
   }
 

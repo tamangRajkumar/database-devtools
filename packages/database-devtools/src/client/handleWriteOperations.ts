@@ -1,5 +1,5 @@
 import type { DatabaseAdapter } from '../types/adapter';
-import { isEditableDatabaseAdapter } from '../types/adapter';
+import { isWritableDatabaseAdapter } from '../types/adapter';
 import type {
   BeginTransactionMessage,
   CommitTransactionMessage,
@@ -19,7 +19,7 @@ export async function handleBeginTransaction(
   message: BeginTransactionMessage,
   report: TransactionAckReporter,
 ): Promise<void> {
-  if (!isEditableDatabaseAdapter(adapter)) {
+  if (!isWritableDatabaseAdapter(adapter)) {
     report({
       transactionId: message.transactionId,
       action: 'begin',
@@ -51,7 +51,7 @@ export async function handleCommitTransaction(
   message: CommitTransactionMessage,
   report: TransactionAckReporter,
 ): Promise<void> {
-  if (!isEditableDatabaseAdapter(adapter)) {
+  if (!isWritableDatabaseAdapter(adapter)) {
     report({
       transactionId: message.transactionId,
       action: 'commit',
@@ -83,7 +83,7 @@ export async function handleRollbackTransaction(
   message: RollbackTransactionMessage,
   report: TransactionAckReporter,
 ): Promise<void> {
-  if (!isEditableDatabaseAdapter(adapter)) {
+  if (!isWritableDatabaseAdapter(adapter)) {
     report({
       transactionId: message.transactionId,
       action: 'rollback',
@@ -115,7 +115,7 @@ export async function handleExecuteWrite(
   message: ExecuteWriteMessage,
   report: WriteAckReporter,
 ): Promise<void> {
-  if (!isEditableDatabaseAdapter(adapter)) {
+  if (!isWritableDatabaseAdapter(adapter)) {
     report({
       writeId: message.writeId,
       transactionId: message.transactionId,

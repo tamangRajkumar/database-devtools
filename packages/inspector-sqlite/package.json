@@ -1,7 +1,7 @@
 {
-  "name": "@database-devtools/sqlite",
+  "name": "@database-devtools/inspector-sqlite",
   "version": "0.1.0",
-  "description": "Expo SQLite adapter for Database DevTools",
+  "description": "SQLite snapshot inspector for Database DevTools browser UI",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,12 +22,14 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "database-devtools": "workspace:*",
-    "expo-sqlite": ">=15"
+    "database-devtools": "workspace:*"
+  },
+  "dependencies": {
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
+    "@types/sql.js": "^1.4.9",
     "database-devtools": "workspace:*",
-    "expo-sqlite": "~16.0.10",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
   }
