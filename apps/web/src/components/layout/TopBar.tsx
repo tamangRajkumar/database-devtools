@@ -3,6 +3,7 @@ import { EditModeToggle } from '../edit/EditModeToggle';
 import { RefreshButton } from '../RefreshButton';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeToggle } from '../ThemeToggle';
+import { ActivityIndicator } from './ActivityIndicator';
 import { useDevTools } from '../../context/DevToolsContext';
 
 type TopBarProps = {
@@ -43,6 +44,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
       </div>
 
       <div className="top-bar__right">
+        <ActivityIndicator />
         <EditModeToggle />
         <RefreshButton />
         <StatusBadge state={connectionState} label={`Hub ${connectionState}`} />

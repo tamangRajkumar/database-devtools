@@ -111,7 +111,7 @@ export type { ConnectionState, DevToolsClient, DevToolsClientOptions, Transactio
 export { createDevToolsClient } from './client/createDevToolsClient';
 export { fetchSnapshot } from './client/fetchSnapshot';
 export { handleDeviceSnapshotUpload } from './client/handleDeviceSnapshot';
-export type { DatabaseDevToolsProps } from './components/DatabaseDevTools';
+export type { DatabaseDevToolsProps, FloatingButtonPosition } from './components/DatabaseDevTools';
 export { DatabaseDevTools } from './components/DatabaseDevTools';
 export {
   createExpoSqliteAdapter,

@@ -30,10 +30,20 @@ export function SqlToolbar() {
         >
           Format
         </button>
-        <button type="button" className="sql-toolbar__secondary" onClick={clearActiveSql}>
+        <button
+          type="button"
+          className="sql-toolbar__secondary"
+          onClick={clearActiveSql}
+          title="Clear the editor"
+        >
           Clear
         </button>
-        <button type="button" className="sql-toolbar__secondary" onClick={openSaveDialog}>
+        <button
+          type="button"
+          className="sql-toolbar__secondary"
+          onClick={openSaveDialog}
+          title="Save current query as a favorite"
+        >
           Save favorite
         </button>
         <span className="sql-toolbar__hint">Ctrl+Enter to run</span>

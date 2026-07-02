@@ -21,7 +21,7 @@ import {
 import { logger } from '../utils/logger';
 import type { ConnectionManager } from './connectionManager';
 import type { MessageRouter } from './messageRouter';
-import type { WriteSessionManager } from './writeSessionManager';
+import type { WriteSessionManager, WriteSession } from './writeSessionManager';
 
 export class WriteCoordinator {
   constructor(
@@ -272,24 +272,44 @@ export class WriteCoordinator {
 
   checkTimeouts(): void {
     for (const session of this.sessions.getExpired()) {
-      logger.syncFailed(session.transactionId, 'TIMEOUT', 'Write transaction timed out');
-
-      this.sendWriteError(session.browserConnectionId, {
-        transactionId: session.transactionId,
-        code: 'TIMEOUT',
-        message: 'Write transaction timed out',
-      });
-
-      this.router.sendToMobile(
-        session.deviceId,
-        createMessage<RollbackTransactionMessage>({
-          type: MessageType.ROLLBACK_TRANSACTION,
-          transactionId: session.transactionId,
-        }),
-      );
-
-      this.sessions.remove(session.transactionId);
+      this.rollbackSession(session, 'TIMEOUT', 'Write transaction timed out');
     }
+  }
+
+  rollbackSessionsOnBrowserDisconnect(browserConnectionId: string): void {
+    for (const session of this.sessions.getByBrowserConnectionId(browserConnectionId)) {
+      this.rollbackSession(session, 'NO_TRANSACTION', 'Browser disconnected');
+    }
+  }
+
+  rollbackSessionsForDevice(deviceId: string): void {
+    for (const session of this.sessions.getByDeviceId(deviceId)) {
+      this.rollbackSession(session, 'NO_TRANSACTION', 'Device disconnected');
+    }
+  }
+
+  private rollbackSession(
+    session: WriteSession,
+    code: WriteErrorCode,
+    message: string,
+  ): void {
+    logger.syncFailed(session.transactionId, code, message);
+
+    this.sendWriteError(session.browserConnectionId, {
+      transactionId: session.transactionId,
+      code,
+      message,
+    });
+
+    this.router.sendToMobile(
+      session.deviceId,
+      createMessage<RollbackTransactionMessage>({
+        type: MessageType.ROLLBACK_TRANSACTION,
+        transactionId: session.transactionId,
+      }),
+    );
+
+    this.sessions.remove(session.transactionId);
   }
 
   private sendTransactionStatus(

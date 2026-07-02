@@ -3,6 +3,8 @@ import { defaultKeymap } from '@codemirror/commands';
 import { sql } from '@codemirror/lang-sql';
 import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import { useDevTools } from '../../context/DevToolsContext';
+import { buildSqlSchemaCompletion } from '../../lib/sqlSchemaCompletion';
 
 type SqlEditorProps = {
   value: string;
@@ -12,6 +14,7 @@ type SqlEditorProps = {
 };
 
 const editableCompartment = new Compartment();
+const schemaCompartment = new Compartment();
 
 const editorTheme = EditorView.theme({
   '&': {
@@ -58,6 +61,7 @@ function getSqlToRun(view: EditorView): string {
 }
 
 export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEditorProps) {
+  const { schema } = useDevTools();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -78,7 +82,7 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
         doc: value,
         extensions: [
           lineNumbers(),
-          sql(),
+          schemaCompartment.of(sql({ schema: buildSqlSchemaCompletion(schema) })),
           EditorView.lineWrapping,
           editorTheme,
           editableCompartment.of(EditorView.editable.of(!disabled)),
@@ -123,9 +127,12 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
     }
 
     view.dispatch({
-      effects: editableCompartment.reconfigure(EditorView.editable.of(!disabled)),
+      effects: [
+        editableCompartment.reconfigure(EditorView.editable.of(!disabled)),
+        schemaCompartment.reconfigure(sql({ schema: buildSqlSchemaCompletion(schema) })),
+      ],
     });
-  }, [disabled]);
+  }, [disabled, schema]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -143,5 +150,12 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
     }
   }, [value]);
 
-  return <div className="sql-editor-cm sql-editor-cm--fill" ref={containerRef} />;
+  return (
+    <div
+      className="sql-editor-cm sql-editor-cm--fill"
+      ref={containerRef}
+      id="sql-editor"
+      aria-label="SQL editor"
+    />
+  );
 }

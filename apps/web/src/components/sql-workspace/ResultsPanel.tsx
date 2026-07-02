@@ -1,13 +1,16 @@
 import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { QueryResultsGrid } from '../workspace/QueryResultsGrid';
 import { ResultsToolbar } from './ResultsToolbar';
 
 export function ResultsPanel() {
   const { result, error, running } = useSqlWorkspace();
+  const { setBottomPanelTab } = useWorkspace();
 
   if (running) {
     return (
       <div className="sql-results explorer-empty">
-        <p>Running query…</p>
+        <div className="loading-skeleton loading-skeleton--text">Running query…</div>
       </div>
     );
   }
@@ -18,7 +21,9 @@ export function ResultsPanel() {
         <p className="query-error" role="alert">
           {error}
         </p>
-        <p className="bottom-panel__placeholder">See the Messages tab for details.</p>
+        <button type="button" className="sql-toolbar__secondary" onClick={() => setBottomPanelTab('output')}>
+          View details in Output
+        </button>
       </div>
     );
   }
@@ -27,6 +32,9 @@ export function ResultsPanel() {
     return (
       <div className="sql-results explorer-empty">
         <p>Run a query to see results here.</p>
+        <p className="bottom-panel__placeholder">
+          Tip: click a table in Object Explorer, or use SELECT TOP 100 from the context menu.
+        </p>
       </div>
     );
   }
@@ -43,28 +51,7 @@ export function ResultsPanel() {
   return (
     <div className="sql-results">
       <ResultsToolbar />
-      <div className="data-table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              {result.columns.map((column) => (
-                <th key={column}>{column}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {result.rows.map((row, index) => (
-              <tr key={index}>
-                {row.map((cell, cellIndex) => (
-                  <td key={cellIndex}>
-                    {cell === null ? <span className="data-grid__null">NULL</span> : String(cell)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <QueryResultsGrid columns={result.columns} rows={result.rows} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-export type BottomPanelTab = 'results' | 'messages' | 'data' | 'schema' | 'history';
+export type BottomPanelTab = 'results' | 'data' | 'output' | 'history';
 
 export type QueryTab = {
   id: string;
@@ -11,4 +11,11 @@ export type ExecutionMeta = {
   durationMs: number;
   rowCount: number;
   ranAt: number;
+};
+
+export type WorkspacePreferences = {
+  objectExplorerOpen: boolean;
+  bottomPanelTab: BottomPanelTab;
+  editorSplitRatio: number;
+  navCollapsed: boolean;
 };

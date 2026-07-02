@@ -129,7 +129,7 @@ export {
   handleExecuteWrite,
   handleRollbackTransaction,
 } from './client/handleWriteOperations';
-export type { DatabaseDevToolsProps } from './components/DatabaseDevTools';
+export type { DatabaseDevToolsProps, FloatingButtonPosition } from './components/DatabaseDevTools';
 export { DatabaseDevTools } from './components/DatabaseDevTools';
 export type { DevToolsServer, DevToolsServerOptions } from './server/createDevToolsServer';
 export { createDevToolsServer } from './server/createDevToolsServer';

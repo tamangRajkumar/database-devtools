@@ -1,6 +1,6 @@
 import { useDevTools } from '../context/DevToolsContext';
+import { RefreshButton } from '../components/RefreshButton';
 import { StatusBadge } from '../components/StatusBadge';
-
 function formatTimestamp(timestamp: number): string {
   return new Date(timestamp).toLocaleString();
 }
@@ -17,7 +17,11 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function OverviewPanel() {
+type OverviewPanelProps = {
+  onOpenWorkspace: () => void;
+};
+
+export function OverviewPanel({ onOpenWorkspace }: OverviewPanelProps) {
   const {
     connectionState,
     selectedDevice,
@@ -27,6 +31,8 @@ export function OverviewPanel() {
     lastSnapshotAt,
     hasDatabase,
     tables,
+    refresh,
+    refreshState,
   } = useDevTools();
 
   if (!selectedDevice) {
@@ -48,14 +54,36 @@ export function OverviewPanel() {
   return (
     <section className="panel">
       <h2 className="panel__title">Overview</h2>
+
+      <div className="overview-actions">
+        <button type="button" className="overview-actions__primary" onClick={onOpenWorkspace}>
+          Open Workspace
+        </button>
+        <RefreshButton />
+        {hasDatabase && (
+          <span className="overview-actions__hint">
+            {tables.length} table{tables.length === 1 ? '' : 's'} loaded
+          </span>
+        )}
+      </div>
+
       {!hasDatabase && (
         <div className="workspace-empty workspace-empty--inline">
           <div>
             <p className="workspace-empty__title">No database loaded</p>
             <p className="workspace-empty__text">
-              Use Refresh in the toolbar to sync the SQLite database from the device.
+              Use Refresh to sync the SQLite database from the device, then open Workspace to
+              explore tables and run SQL.
             </p>
           </div>
+          <button
+            type="button"
+            className="refresh-button"
+            disabled={refreshState === 'refreshing'}
+            onClick={refresh}
+          >
+            {refreshState === 'refreshing' ? 'Refreshing…' : 'Refresh database'}
+          </button>
         </div>
       )}
 

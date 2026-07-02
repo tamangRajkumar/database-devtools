@@ -1,49 +1,228 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Pressable, StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type StyleProp,
+  type TextStyle,
+} from 'react-native';
 import { useDevTools } from '../hooks/useDevTools';
+import {
+  FLOATING_BUTTON_MARGIN,
+  FLOATING_BUTTON_SIZE,
+  clampFloatingPosition,
+  getCornerPosition,
+  isFloatingButtonTap,
+  snapFloatingPositionToEdges,
+  type FloatingButtonCorner,
+  type FloatingButtonPosition,
+} from '../utils/floatingButtonPosition';
 import { getConnectionDotColor } from './ConnectionStatusBadge';
 
 const DEFAULT_ICON_SIZE = 22;
 const DEFAULT_ICON_COLOR = '#f8fafc';
 
 export type FloatingDevToolsButtonProps = {
-  position?: 'bottom-right' | 'bottom-left';
+  position?: FloatingButtonCorner;
   iconStyle?: StyleProp<TextStyle>;
+  draggable?: boolean;
+  snapToEdges?: boolean;
+  floatingPosition?: FloatingButtonPosition;
+  onFloatingPositionChange?: (position: FloatingButtonPosition) => void;
 };
 
 export function FloatingDevToolsButton({
   position = 'bottom-right',
   iconStyle,
+  draggable = true,
+  snapToEdges = true,
+  floatingPosition,
+  onFloatingPositionChange,
 }: FloatingDevToolsButtonProps) {
   const { connectionState, openSettings } = useDevTools();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const [internalPosition, setInternalPosition] = useState<FloatingButtonPosition | null>(null);
+  const [dragPosition, setDragPosition] = useState<FloatingButtonPosition | null>(null);
+  const dragOrigin = useRef<FloatingButtonPosition>({ x: 0, y: 0 });
+  const hasInitialized = useRef(false);
+  const onFloatingPositionChangeRef = useRef(onFloatingPositionChange);
 
-  const positionStyle =
-    position === 'bottom-left' ? styles.bottomLeft : styles.bottomRight;
+  useEffect(() => {
+    onFloatingPositionChangeRef.current = onFloatingPositionChange;
+  }, [onFloatingPositionChange]);
+
+  const layout = useMemo(
+    () => ({
+      windowWidth,
+      windowHeight,
+      buttonSize: FLOATING_BUTTON_SIZE,
+      margin: FLOATING_BUTTON_MARGIN,
+    }),
+    [windowWidth, windowHeight],
+  );
+
+  const committedPosition = floatingPosition ?? internalPosition;
+  const renderedPosition = dragPosition ?? committedPosition;
+
+  const commitPosition = useCallback(
+    (next: FloatingButtonPosition) => {
+      const clamped = clampFloatingPosition(next, layout);
+
+      if (!floatingPosition) {
+        setInternalPosition(clamped);
+      }
+
+      onFloatingPositionChangeRef.current?.(clamped);
+      return clamped;
+    },
+    [floatingPosition, layout],
+  );
+
+  useEffect(() => {
+    if (windowWidth <= 0 || windowHeight <= 0) {
+      return;
+    }
+
+    if (floatingPosition) {
+      hasInitialized.current = true;
+      return;
+    }
+
+    if (!hasInitialized.current) {
+      setInternalPosition(getCornerPosition(position, layout));
+      hasInitialized.current = true;
+    }
+  }, [floatingPosition, layout, position, windowHeight, windowWidth]);
+
+  useEffect(() => {
+    if (!committedPosition || windowWidth <= 0 || windowHeight <= 0) {
+      return;
+    }
+
+    const clamped = clampFloatingPosition(committedPosition, layout);
+
+    if (clamped.x !== committedPosition.x || clamped.y !== committedPosition.y) {
+      commitPosition(clamped);
+    }
+  }, [commitPosition, committedPosition, layout, windowHeight, windowWidth]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => draggable,
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          draggable && (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
+        onPanResponderGrant: () => {
+          if (!committedPosition) {
+            return;
+          }
+
+          dragOrigin.current = committedPosition;
+        },
+        onPanResponderMove: (_, gesture) => {
+          setDragPosition(
+            clampFloatingPosition(
+              {
+                x: dragOrigin.current.x + gesture.dx,
+                y: dragOrigin.current.y + gesture.dy,
+              },
+              layout,
+            ),
+          );
+        },
+        onPanResponderRelease: (_, gesture) => {
+          setDragPosition(null);
+
+          const movement = Math.hypot(gesture.dx, gesture.dy);
+
+          if (isFloatingButtonTap(movement)) {
+            openSettings();
+            return;
+          }
+
+          const raw = {
+            x: dragOrigin.current.x + gesture.dx,
+            y: dragOrigin.current.y + gesture.dy,
+          };
+          const next = snapToEdges
+            ? snapFloatingPositionToEdges(raw, layout)
+            : clampFloatingPosition(raw, layout);
+
+          commitPosition(next);
+        },
+        onPanResponderTerminate: () => {
+          setDragPosition(null);
+        },
+      }),
+    [commitPosition, committedPosition, draggable, layout, openSettings, snapToEdges],
+  );
+
+  if (!renderedPosition) {
+    return null;
+  }
+
+  const buttonContent = (
+    <>
+      <MaterialCommunityIcons
+        color={DEFAULT_ICON_COLOR}
+        name="database"
+        size={DEFAULT_ICON_SIZE}
+        style={iconStyle}
+      />
+      <View
+        style={[styles.statusDot, { backgroundColor: getConnectionDotColor(connectionState) }]}
+      />
+    </>
+  );
+
+  if (!draggable) {
+    const positionStyle = position === 'bottom-left' ? styles.bottomLeft : styles.bottomRight;
+
+    return (
+      <View style={[styles.fixedContainer, positionStyle]} pointerEvents="box-none">
+        <Pressable
+          accessibilityLabel="Open Database DevTools"
+          accessibilityRole="button"
+          onPress={openSettings}
+          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+        >
+          {buttonContent}
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, positionStyle]} pointerEvents="box-none">
-      <Pressable
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.draggableContainer,
+        {
+          transform: [
+            { translateX: renderedPosition.x },
+            { translateY: renderedPosition.y },
+          ],
+        },
+      ]}
+      {...panResponder.panHandlers}
+    >
+      <View
+        accessibilityHint="Drag to move. Tap to open settings."
         accessibilityLabel="Open Database DevTools"
         accessibilityRole="button"
-        onPress={openSettings}
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+        style={[styles.button, dragPosition && styles.buttonDragging]}
       >
-        <MaterialCommunityIcons
-          color={DEFAULT_ICON_COLOR}
-          name="database"
-          size={DEFAULT_ICON_SIZE}
-          style={iconStyle}
-        />
-        <View
-          style={[styles.statusDot, { backgroundColor: getConnectionDotColor(connectionState) }]}
-        />
-      </Pressable>
+        {buttonContent}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  fixedContainer: {
     position: 'absolute',
     bottom: 24,
     zIndex: 9999,
@@ -54,10 +233,16 @@ const styles = StyleSheet.create({
   bottomLeft: {
     left: 16,
   },
+  draggableContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 9999,
+  },
   button: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: FLOATING_BUTTON_SIZE,
+    height: FLOATING_BUTTON_SIZE,
+    borderRadius: FLOATING_BUTTON_SIZE / 2,
     backgroundColor: '#1e293b',
     alignItems: 'center',
     justifyContent: 'center',
@@ -69,6 +254,10 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.85,
+  },
+  buttonDragging: {
+    opacity: 0.92,
+    transform: [{ scale: 1.04 }],
   },
   statusDot: {
     position: 'absolute',

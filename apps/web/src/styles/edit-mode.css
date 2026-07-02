@@ -216,3 +216,11 @@
 .explorer-toolbar__insert {
   margin-right: 0.5rem;
 }
+
+.edit-mode-banner {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+}

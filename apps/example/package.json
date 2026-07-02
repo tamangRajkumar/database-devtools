@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "database-devtools": "workspace:*",
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "database-devtools": "workspace:*",
     "expo": "~54.0.35",
     "expo-modules-core": "~3.0.30",
     "expo-sqlite": "~16.0.10",

@@ -4,14 +4,9 @@ import { ExplorerToolbar } from '../explorer/ExplorerToolbar';
 import { PaginationBar } from '../explorer/PaginationBar';
 import { RowDetailDrawer } from '../explorer/RowDetailDrawer';
 import { SchemaView } from '../explorer/SchemaView';
-import type { ExplorerView } from '../../context/ExplorerContext';
 
-type TableBrowsePanelProps = {
-  view: ExplorerView;
-};
-
-export function TableBrowsePanel({ view }: TableBrowsePanelProps) {
-  const { selectedTable } = useExplorer();
+export function TableBrowsePanel() {
+  const { selectedTable, view } = useExplorer();
 
   if (!selectedTable) {
     return (

@@ -103,4 +103,14 @@ export class WriteSessionManager {
       return now - session.createdAt >= WRITE_TRANSACTION_TIMEOUT_MS;
     });
   }
+
+  getByBrowserConnectionId(browserConnectionId: string): WriteSession[] {
+    return [...this.sessions.values()].filter(
+      (session) => session.browserConnectionId === browserConnectionId,
+    );
+  }
+
+  getByDeviceId(deviceId: string): WriteSession[] {
+    return [...this.sessions.values()].filter((session) => session.deviceId === deviceId);
+  }
 }

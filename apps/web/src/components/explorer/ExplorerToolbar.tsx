@@ -24,7 +24,7 @@ export function ExplorerToolbar({ embedded = false }: ExplorerToolbarProps) {
   }
 
   return (
-    <div className="explorer-toolbar">
+    <div className={`explorer-toolbar ${embedded ? 'explorer-toolbar--embedded' : ''}`}>
       <div className="explorer-toolbar__left">
         <h2 className="explorer-toolbar__title mono">{selectedTable}</h2>
         {tablePage && (
@@ -34,30 +34,30 @@ export function ExplorerToolbar({ embedded = false }: ExplorerToolbarProps) {
         )}
       </div>
 
-      {!embedded && (
-        <div className="explorer-toolbar__center">
-          <div className="explorer-tabs" role="tablist" aria-label="Table views">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === 'data'}
-              className={`explorer-tabs__item ${view === 'data' ? 'explorer-tabs__item--active' : ''}`}
-              onClick={() => setView('data')}
-            >
-              Data
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === 'schema'}
-              className={`explorer-tabs__item ${view === 'schema' ? 'explorer-tabs__item--active' : ''}`}
-              onClick={() => setView('schema')}
-            >
-              Schema
-            </button>
-          </div>
+      <div className="explorer-toolbar__center">
+        <div className="explorer-tabs" role="tablist" aria-label="Table views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'data'}
+            className={`explorer-tabs__item ${view === 'data' ? 'explorer-tabs__item--active' : ''}`}
+            onClick={() => setView('data')}
+            title="Browse table rows"
+          >
+            Data
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'schema'}
+            className={`explorer-tabs__item ${view === 'schema' ? 'explorer-tabs__item--active' : ''}`}
+            onClick={() => setView('schema')}
+            title="View table schema"
+          >
+            Schema
+          </button>
         </div>
-      )}
+      </div>
 
       <div className="explorer-toolbar__right">
         {view === 'data' && editMode && transactionOpen && (

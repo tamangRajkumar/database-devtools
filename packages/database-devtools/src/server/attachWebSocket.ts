@@ -43,8 +43,13 @@ export function attachWebSocket(
     }
 
     if (client.role === DevToolsRole.MOBILE) {
+      if (client.deviceId) {
+        writeCoordinator.rollbackSessionsForDevice(client.deviceId);
+      }
+
       logger.mobileDisconnected(client.deviceId);
     } else {
+      writeCoordinator.rollbackSessionsOnBrowserDisconnect(client.connectionId);
       logger.browserDisconnected(client.connectionId);
     }
 

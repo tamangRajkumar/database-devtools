@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { DatabaseDevTools } from 'database-devtools';
+import { usePersistedFloatingPosition } from './usePersistedFloatingPosition';
+
+let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 async function seedDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
-  await db.execAsync(`
-    PRAGMA journal_mode = WAL;
-
+  await db.withTransactionAsync(async () => {
+    await db.execAsync(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL UNIQUE,
@@ -32,20 +34,33 @@ async function seedDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
       (1, 1, 'Conference keynote', 'confirmed'),
       (2, 1, 'Workshop', 'pending'),
       (3, 2, 'Team offsite', 'confirmed');
-  `);
+    `);
+  });
+}
+
+async function openExampleDatabase(): Promise<SQLite.SQLiteDatabase> {
+  if (!databasePromise) {
+    databasePromise = (async () => {
+      const db = await SQLite.openDatabaseAsync('devtools-example.db');
+      await seedDatabase(db);
+      return db;
+    })();
+  }
+
+  return databasePromise;
 }
 
 export default function App() {
   const [database, setDatabase] = useState<SQLite.SQLiteDatabase | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { floatingPosition, onFloatingPositionChange, ready } = usePersistedFloatingPosition();
 
   useEffect(() => {
     let active = true;
 
     async function init() {
       try {
-        const db = await SQLite.openDatabaseAsync('devtools-example.db');
-        await seedDatabase(db);
+        const db = await openExampleDatabase();
 
         if (!active) {
           return;
@@ -71,12 +86,20 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My App</Text>
-      <Text style={styles.subtitle}>Tap the DB button, then Refresh in the browser DevTools</Text>
+      <Text style={styles.subtitle}>Drag the DB button to move it. Tap to open DevTools.</Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
       {!database && !error && <ActivityIndicator size="large" />}
 
-      {database && <DatabaseDevTools database={database} />}
+      {database && ready && (
+        <DatabaseDevTools
+          database={database}
+          draggable
+          floatingPosition={floatingPosition}
+          onFloatingPositionChange={onFloatingPositionChange}
+          snapToEdges
+        />
+      )}
       <StatusBar style="auto" />
     </View>
   );

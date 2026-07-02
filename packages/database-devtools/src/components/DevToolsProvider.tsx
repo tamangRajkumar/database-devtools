@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { resolveAdapter } from '../adapter/resolveAdapter';
+import { isWritableDatabaseAdapter } from '../types/adapter';
 import {
   createDevToolsClient,
   type ConnectionState,
@@ -56,6 +57,7 @@ export function DevToolsProvider({
   const clientRef = useRef<ReturnType<typeof createDevToolsClient> | null>(null);
   const onConnectionStateChangeRef = useRef(onConnectionStateChange);
   const databaseRef = useRef(resolvedAdapter);
+  const rollbackOpenTransactionRef = useRef<(() => Promise<void>) | null>(null);
   const exportWaitersRef = useRef<ExportWaiters | null>(null);
   const exportTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,6 +141,22 @@ export function DevToolsProvider({
 
   useEffect(() => {
     databaseRef.current = resolvedAdapter;
+  }, [resolvedAdapter]);
+
+  useEffect(() => {
+    rollbackOpenTransactionRef.current = async () => {
+      const adapter = databaseRef.current;
+
+      if (!isWritableDatabaseAdapter(adapter)) {
+        return;
+      }
+
+      try {
+        await adapter.rollbackTransaction();
+      } catch {
+        // Best-effort cleanup when the provider unmounts or reconnects.
+      }
+    };
   }, [resolvedAdapter]);
 
   useEffect(() => {
@@ -239,6 +257,7 @@ export function DevToolsProvider({
     client.connect();
 
     return () => {
+      void rollbackOpenTransactionRef.current?.();
       client.disconnect();
       clientRef.current = null;
       clearExportWaiters();

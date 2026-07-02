@@ -1,6 +1,7 @@
 import { DevToolsProvider } from './context/DevToolsContext';
 import { EditModeProvider } from './context/EditModeContext';
 import { ExplorerProvider } from './context/ExplorerContext';
+import { OnboardingProvider } from './context/OnboardingContext';
 import { SqlWorkspaceProvider } from './context/SqlWorkspaceContext';
 import { WorkspaceProvider } from './context/WorkspaceContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -12,15 +13,17 @@ export function App() {
     <ThemeProvider>
       <ToastProvider>
         <DevToolsProvider>
-          <EditModeProvider>
-            <ExplorerProvider>
-              <WorkspaceProvider>
-                <SqlWorkspaceProvider>
-                  <DevToolsShell />
-                </SqlWorkspaceProvider>
-              </WorkspaceProvider>
-            </ExplorerProvider>
-          </EditModeProvider>
+          <OnboardingProvider>
+            <EditModeProvider>
+              <ExplorerProvider>
+                <WorkspaceProvider>
+                  <SqlWorkspaceProvider>
+                    <DevToolsShell />
+                  </SqlWorkspaceProvider>
+                </WorkspaceProvider>
+              </ExplorerProvider>
+            </EditModeProvider>
+          </OnboardingProvider>
         </DevToolsProvider>
       </ToastProvider>
     </ThemeProvider>

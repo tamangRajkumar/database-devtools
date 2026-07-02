@@ -36,6 +36,8 @@ import {
 import type { ExecutionMeta, QueryTab } from '../types/workspace';
 import { type FavoriteQuery, type QueryHistoryEntry } from '../types/sqlWorkspace';
 import { useDevTools } from './DevToolsContext';
+import { useOnboarding } from './OnboardingContext';
+import { useToast } from './ToastContext';
 import { useWorkspace } from './WorkspaceContext';
 
 type SqlWorkspaceContextValue = {
@@ -70,6 +72,8 @@ type SqlWorkspaceContextValue = {
   closeSaveDialog: () => void;
   copyStatus: string | null;
   insertSql: (sql: string) => void;
+  insertSqlAndRun: (sql: string) => void;
+  renameTab: (id: string, title: string) => void;
 };
 
 const SqlWorkspaceContext = createContext<SqlWorkspaceContextValue | null>(null);
@@ -84,7 +88,9 @@ function markDirty(tab: QueryTab, sql: string, originalSql: string): QueryTab {
 
 export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
   const { selectedDeviceId, hasDatabase, executeQuery, clearQueryError } = useDevTools();
-  const { setBottomPanelTab } = useWorkspace();
+  const { setBottomPanelTab, markOutputUnread } = useWorkspace();
+  const { showToast } = useToast();
+  const { markQueryRun } = useOnboarding();
 
   const initialTabsRef = useRef(loadQueryTabs(selectedDeviceId));
   const [tabs, setTabs] = useState<QueryTab[]>(() =>
@@ -178,8 +184,14 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      const tab = tabs.find((item) => item.id === id);
+
+      if (tab?.dirty && !window.confirm(`Close ${tab.title} without saving changes?`)) {
+        return;
+      }
+
       setTabs((current) => {
-        const next = current.filter((tab) => tab.id !== id);
+        const next = current.filter((item) => item.id !== id);
 
         if (activeTabId === id) {
           setActiveTabId(next[0]!.id);
@@ -194,8 +206,20 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         return next;
       });
     },
-    [tabs.length, activeTabId],
+    [tabs, activeTabId],
   );
+
+  const renameTab = useCallback((id: string, title: string) => {
+    const trimmed = title.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setTabs((current) =>
+      current.map((tab) => (tab.id === id ? { ...tab, title: trimmed } : tab)),
+    );
+  }, []);
 
   const switchTab = useCallback((id: string) => {
     setActiveTabId(id);
@@ -211,7 +235,8 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
 
       if (!queryText) {
         setLastMessage('Nothing to run — enter a SQL statement first.');
-        setBottomPanelTab('messages');
+        setBottomPanelTab('output');
+        markOutputUnread();
         return;
       }
 
@@ -234,6 +259,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         const entry = createHistoryEntry(queryText, queryResult);
         setHistory(appendHistory(selectedDeviceId, entry));
         setBottomPanelTab('results');
+        markQueryRun();
       } catch (runError) {
         const message = runError instanceof Error ? runError.message : 'Query failed';
         setError(message);
@@ -242,7 +268,13 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         setLastMessage(message);
         const entry = createHistoryEntry(queryText, undefined, message);
         setHistory(appendHistory(selectedDeviceId, entry));
-        setBottomPanelTab('messages');
+        setBottomPanelTab('output');
+        markOutputUnread();
+        showToast({
+          title: 'Query failed',
+          message,
+          variant: 'error',
+        });
       } finally {
         setRunning(false);
       }
@@ -255,6 +287,9 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       clearQueryError,
       selectedDeviceId,
       setBottomPanelTab,
+      markOutputUnread,
+      markQueryRun,
+      showToast,
     ],
   );
 
@@ -276,6 +311,21 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       setLastMessage(null);
     },
     [updateActiveTabSql],
+  );
+
+  const insertSqlAndRun = useCallback(
+    (nextSql: string) => {
+      updateActiveTabSql(nextSql);
+      setResult(null);
+      setError(null);
+      setExecutionMeta(null);
+      setLastMessage(null);
+
+      window.setTimeout(() => {
+        runQuery(nextSql);
+      }, 0);
+    },
+    [updateActiveTabSql, runQuery],
   );
 
   const loadFromHistory = useCallback(
@@ -387,6 +437,8 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       closeSaveDialog: () => setSaveDialogOpen(false),
       copyStatus,
       insertSql,
+      insertSqlAndRun,
+      renameTab,
     }),
     [
       tabs,
@@ -417,6 +469,8 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       saveDialogOpen,
       copyStatus,
       insertSql,
+      insertSqlAndRun,
+      renameTab,
     ],
   );
 

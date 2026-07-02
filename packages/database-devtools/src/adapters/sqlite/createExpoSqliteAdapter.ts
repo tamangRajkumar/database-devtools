@@ -19,6 +19,16 @@ export function createExpoSqliteAdapter(
 ): WritableDatabaseAdapter {
   const { database } = options;
   let inTransaction = false;
+  let operationQueue: Promise<void> = Promise.resolve();
+
+  const enqueue = async <T>(operation: () => Promise<T>): Promise<T> => {
+    const next = operationQueue.then(operation);
+    operationQueue = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    return next;
+  };
 
   const assertTransaction = (): void => {
     if (!inTransaction) {
@@ -76,44 +86,56 @@ export function createExpoSqliteAdapter(
       importSnapshot: false,
     },
     async exportSnapshot() {
-      await database.execAsync('PRAGMA wal_checkpoint(FULL)');
-      const bytes = await database.serializeAsync();
+      return enqueue(async () => {
+        if (inTransaction) {
+          throw new Error('Cannot export while a write transaction is open');
+        }
 
-      return {
-        bytes,
-        mimeType: SQLITE_SNAPSHOT_MIME_TYPE,
-        kind: 'sqlite' as const,
-        exportedAt: Date.now(),
-      };
+        await database.execAsync('PRAGMA wal_checkpoint(FULL)');
+        const bytes = await database.serializeAsync();
+
+        return {
+          bytes,
+          mimeType: SQLITE_SNAPSHOT_MIME_TYPE,
+          kind: 'sqlite' as const,
+          exportedAt: Date.now(),
+        };
+      });
     },
     async beginTransaction() {
-      if (inTransaction) {
-        throw new Error('Transaction already open');
-      }
+      return enqueue(async () => {
+        if (inTransaction) {
+          throw new Error('Transaction already open');
+        }
 
-      await database.execAsync('BEGIN IMMEDIATE');
-      inTransaction = true;
+        await database.execAsync('BEGIN IMMEDIATE');
+        inTransaction = true;
+      });
     },
     async commitTransaction() {
-      assertTransaction();
+      return enqueue(async () => {
+        assertTransaction();
 
-      try {
-        await database.execAsync('COMMIT');
-      } finally {
-        inTransaction = false;
-      }
+        try {
+          await database.execAsync('COMMIT');
+        } finally {
+          inTransaction = false;
+        }
+      });
     },
     async rollbackTransaction() {
-      if (!inTransaction) {
-        return;
-      }
+      return enqueue(async () => {
+        if (!inTransaction) {
+          return;
+        }
 
-      try {
-        await database.execAsync('ROLLBACK');
-      } finally {
-        inTransaction = false;
-      }
+        try {
+          await database.execAsync('ROLLBACK');
+        } finally {
+          inTransaction = false;
+        }
+      });
     },
-    executeWrite: runWrite,
+    executeWrite: (operation) => enqueue(() => runWrite(operation)),
   };
 }
