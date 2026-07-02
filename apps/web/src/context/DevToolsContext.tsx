@@ -11,6 +11,8 @@ import {
 import {
   createDevToolsClient,
   fetchSnapshot,
+  formatRefreshErrorMessage,
+  resolveSnapshotDownloadUrl,
   type ConnectionState,
   type DevToolsClient,
   type TransactionState,
@@ -18,24 +20,27 @@ import {
 import { createInspectorForSnapshot, type DatabaseInspector } from 'database-devtools/inspector';
 import {
   DevToolsRole,
-  type DatabaseReadyMessage,
   type DeviceStatusPayload,
   type MobileDeviceInfo,
-  type SyncState,
+  type RefreshState,
+  type SnapshotReadyMessage,
 } from 'database-devtools/protocol';
 import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult, WriteOperation } from 'database-devtools';
 import { validateReadOnlySql } from '../lib/sqlSafety';
+import {
+  buildSnapshotLoadedToast,
+} from 'database-devtools/client';
+import { useToast } from './ToastContext';
 
-export type RefreshState = 'idle' | 'refreshing' | 'ready' | 'error';
+export type UiRefreshState = 'idle' | 'refreshing' | 'ready' | 'error';
 
 export type SnapshotMeta = {
-  syncId: string;
   deviceId: string;
   size: number;
   exportedAt: number;
-  downloadUrl: string;
   kind: string;
   mimeType: string;
+  databaseName?: string;
 };
 
 type DevToolsContextValue = {
@@ -45,8 +50,8 @@ type DevToolsContextValue = {
   setSelectedDeviceId: (id: string | null) => void;
   selectedDevice: MobileDeviceInfo | null;
   lastUpdatedAt: number | null;
-  refreshState: RefreshState;
-  syncState: SyncState | null;
+  refreshState: UiRefreshState;
+  syncState: RefreshState | null;
   snapshotMeta: SnapshotMeta | null;
   lastSnapshotAt: number | null;
   refreshError: string | null;
@@ -68,12 +73,13 @@ type DevToolsContextValue = {
 const DevToolsContext = createContext<DevToolsContextValue | null>(null);
 
 export function DevToolsProvider({ children }: { children: ReactNode }) {
+  const { showToast } = useToast();
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatusPayload | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
-  const [refreshState, setRefreshState] = useState<RefreshState>('idle');
-  const [syncState, setSyncState] = useState<SyncState | null>(null);
+  const [refreshState, setRefreshState] = useState<UiRefreshState>('idle');
+  const [syncState, setSyncState] = useState<RefreshState | null>(null);
   const [snapshotMeta, setSnapshotMeta] = useState<SnapshotMeta | null>(null);
   const [lastSnapshotAt, setLastSnapshotAt] = useState<number | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -84,8 +90,18 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [transactionState, setTransactionState] = useState<TransactionState>('idle');
 
   const clientRef = useRef<DevToolsClient | null>(null);
-  const activeSyncIdRef = useRef<string | null>(null);
+  const activeRefreshDeviceIdRef = useRef<string | null>(null);
+  const selectedDeviceIdRef = useRef<string | null>(null);
+  const deviceStatusRef = useRef<DeviceStatusPayload | null>(null);
   const inspectorRef = useRef<DatabaseInspector | null>(null);
+
+  useEffect(() => {
+    selectedDeviceIdRef.current = selectedDeviceId;
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
+    deviceStatusRef.current = deviceStatus;
+  }, [deviceStatus]);
 
   const closeSession = useCallback(() => {
     inspectorRef.current?.close();
@@ -110,19 +126,36 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setDatabaseLoaded(true);
   }, [closeSession]);
 
-  const handleDatabaseReady = useCallback(async (message: DatabaseReadyMessage) => {
-    if (activeSyncIdRef.current && message.syncId !== activeSyncIdRef.current) {
+  const handleSnapshotReady = useCallback(async (message: SnapshotReadyMessage) => {
+    const activeRefreshDeviceId = activeRefreshDeviceIdRef.current;
+    const selectedDeviceId = selectedDeviceIdRef.current;
+    const targetDeviceId = activeRefreshDeviceId ?? selectedDeviceId;
+    const pushedFromDevice = !activeRefreshDeviceId;
+
+    if (!targetDeviceId || message.deviceId !== targetDeviceId) {
       return;
     }
+
+    const client = clientRef.current;
+
+    if (!client) {
+      return;
+    }
+
+    const downloadUrl = resolveSnapshotDownloadUrl(client.getServerUrl(), message.deviceId, {
+      useSameOriginApi: import.meta.env.DEV,
+    });
 
     let bytes: ArrayBuffer;
 
     try {
-      bytes = await fetchSnapshot(message.downloadUrl);
-    } catch {
+      bytes = await fetchSnapshot(downloadUrl);
+    } catch (error) {
       setRefreshState('error');
-      setRefreshError('Snapshot uploaded but download failed');
-      activeSyncIdRef.current = null;
+      setRefreshError(
+        error instanceof Error ? error.message : 'Snapshot uploaded but download failed',
+      );
+      activeRefreshDeviceIdRef.current = null;
       return;
     }
 
@@ -131,28 +164,41 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       setRefreshState('error');
       setRefreshError(
-        error instanceof Error ? error.message : 'Failed to open SQLite snapshot',
+        error instanceof Error
+          ? `Failed to open snapshot in browser: ${error.message}`
+          : 'Failed to open snapshot in browser',
       );
-      activeSyncIdRef.current = null;
+      activeRefreshDeviceIdRef.current = null;
       return;
     }
 
     setSnapshotMeta({
-      syncId: message.syncId,
       deviceId: message.deviceId,
       size: message.size,
       exportedAt: message.exportedAt,
-      downloadUrl: message.downloadUrl,
       kind: message.kind,
       mimeType: message.mimeType,
+      databaseName: message.databaseName,
     });
     setLastSnapshotAt(message.exportedAt);
     setRefreshState('ready');
     setSyncState('ready');
     setRefreshError(null);
     setQueryError(null);
-    activeSyncIdRef.current = null;
-  }, [openSnapshot]);
+    activeRefreshDeviceIdRef.current = null;
+
+    const toast = buildSnapshotLoadedToast(
+      pushedFromDevice ? 'mobile' : 'browser',
+      message.deviceId,
+      message.databaseName ?? message.kind,
+      deviceStatusRef.current,
+    );
+
+    showToast({
+      ...toast,
+      variant: 'success',
+    });
+  }, [openSnapshot, showToast]);
 
   useEffect(() => {
     const client = createDevToolsClient({
@@ -162,23 +208,36 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
         setDeviceStatus(status);
         setLastUpdatedAt(Date.now());
       },
-      onSyncStatus: (message) => {
-        if (activeSyncIdRef.current && message.syncId !== activeSyncIdRef.current) {
+      onRefreshStatus: (message) => {
+        if (activeRefreshDeviceIdRef.current && message.deviceId !== activeRefreshDeviceIdRef.current) {
           return;
         }
 
         setSyncState(message.state);
       },
-      onDatabaseReady: handleDatabaseReady,
-      onSyncError: (message) => {
-        if (activeSyncIdRef.current && message.syncId !== activeSyncIdRef.current) {
+      onSnapshotReady: handleSnapshotReady,
+      onRefreshError: (message) => {
+        const activeRefreshDeviceId = activeRefreshDeviceIdRef.current;
+        const selectedDeviceId = selectedDeviceIdRef.current;
+
+        if (
+          activeRefreshDeviceId &&
+          message.deviceId !== activeRefreshDeviceId
+        ) {
+          return;
+        }
+
+        if (
+          !activeRefreshDeviceId &&
+          message.deviceId !== selectedDeviceId
+        ) {
           return;
         }
 
         setRefreshState('error');
-        setRefreshError(message.message);
+        setRefreshError(formatRefreshErrorMessage(message.code, message.message));
         setSyncState(message.code === 'TIMEOUT' ? 'timeout' : 'failed');
-        activeSyncIdRef.current = null;
+        activeRefreshDeviceIdRef.current = null;
       },
       onTransactionStateChange: setTransactionState,
     });
@@ -191,7 +250,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       clientRef.current = null;
       closeSession();
     };
-  }, [handleDatabaseReady, closeSession]);
+  }, [handleSnapshotReady, closeSession]);
 
   useEffect(() => {
     const mobiles = deviceStatus?.mobiles ?? [];
@@ -236,8 +295,8 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const syncId = client.requestRefresh(selectedDeviceId);
-    activeSyncIdRef.current = syncId;
+    activeRefreshDeviceIdRef.current = selectedDeviceId;
+    client.requestRefresh(selectedDeviceId);
     setRefreshState('refreshing');
     setSyncState('requested');
     setRefreshError(null);
@@ -386,4 +445,3 @@ export function useDevTools(): DevToolsContextValue {
 
   return context;
 }
-

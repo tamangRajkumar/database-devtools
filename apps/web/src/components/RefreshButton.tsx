@@ -1,7 +1,7 @@
 import { useDevTools } from '../context/DevToolsContext';
-import type { SyncState } from 'database-devtools/protocol';
+import type { RefreshState } from 'database-devtools/protocol';
 
-function syncStateLabel(state: SyncState | null): string | null {
+function refreshStateLabel(state: RefreshState | null): string | null {
   switch (state) {
     case 'requested':
       return 'Requesting sync…';
@@ -32,7 +32,7 @@ export function RefreshButton() {
   const disabled =
     connectionState !== 'connected' || !selectedDeviceId || refreshState === 'refreshing';
 
-  const statusLabel = syncStateLabel(syncState);
+  const statusLabel = refreshStateLabel(syncState);
 
   return (
     <div className="refresh-control">
@@ -49,8 +49,8 @@ export function RefreshButton() {
         <span className="refresh-control__status">{statusLabel}</span>
       )}
       {refreshError && refreshState === 'error' && (
-        <span className="refresh-control__error" role="alert">
-          {refreshError}
+        <span className="refresh-control__error" role="alert" title={refreshError}>
+          {refreshError.length > 48 ? `${refreshError.slice(0, 48)}…` : refreshError}
         </span>
       )}
     </div>

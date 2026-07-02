@@ -6,5 +6,11 @@ export default defineConfig({
   assetsInclude: ['**/*.wasm'],
   server: {
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3847',
+        changeOrigin: true,
+      },
+    },
   },
 });

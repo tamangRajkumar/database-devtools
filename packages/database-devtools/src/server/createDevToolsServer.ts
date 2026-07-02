@@ -3,20 +3,22 @@ import { createServer, type Server } from 'node:http';
 import {
   DEFAULT_DEVTOOLS_HOST,
   DEFAULT_DEVTOOLS_PORT,
+  DEVICE_SNAPSHOT_API_PATH,
   MAX_SNAPSHOT_BYTES,
-  SNAPSHOT_API_PATH,
   buildDevToolsHttpUrl,
   buildDevToolsWsUrl,
 } from '../types/protocol';
-import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER } from '../types/snapshot';
+import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER, SNAPSHOT_NAME_HEADER } from '../types/snapshot';
 import { logger } from '../utils/logger';
 import { attachWebSocket } from './attachWebSocket';
 import { ConnectionManager } from './connectionManager';
+import { createCorsMiddleware } from './cors';
 import { DeviceRegistry } from './deviceRegistry';
 import { Heartbeat } from './heartbeat';
 import { MessageRouter } from './messageRouter';
+import { PendingRefreshStore } from './pendingRefreshStore';
 import { RefreshCoordinator } from './refreshCoordinator';
-import { SyncSessionManager } from './syncSessionManager';
+import { SnapshotStore } from './snapshotStore';
 import { WriteCoordinator } from './writeCoordinator';
 import { WriteSessionManager } from './writeSessionManager';
 
@@ -32,7 +34,8 @@ export type DevToolsServer = {
   deviceRegistry: DeviceRegistry;
   router: MessageRouter;
   heartbeat: Heartbeat;
-  syncSessions: SyncSessionManager;
+  snapshotStore: SnapshotStore;
+  pendingRefreshStore: PendingRefreshStore;
   writeSessions: WriteSessionManager;
   refreshCoordinator: RefreshCoordinator;
   writeCoordinator: WriteCoordinator;
@@ -50,28 +53,29 @@ export async function createDevToolsServer(
   const deviceRegistry = new DeviceRegistry(connectionManager);
   const router = new MessageRouter(connectionManager, deviceRegistry);
   const heartbeat = new Heartbeat(connectionManager, router);
-  const syncSessions = new SyncSessionManager();
+  const snapshotStore = new SnapshotStore();
+  const pendingRefreshStore = new PendingRefreshStore();
   const writeSessions = new WriteSessionManager();
 
-  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
-  const httpBaseUrl = buildDevToolsHttpUrl(displayHost, port);
   const refreshCoordinator = new RefreshCoordinator(
     connectionManager,
     router,
-    syncSessions,
-    httpBaseUrl,
+    pendingRefreshStore,
+    snapshotStore,
   );
   const writeCoordinator = new WriteCoordinator(connectionManager, router, writeSessions);
+
+  app.use(createCorsMiddleware());
 
   app.get('/health', (_request, response) => {
     response.json({ ok: true, ...deviceRegistry.snapshot() });
   });
 
   app.post(
-    `${SNAPSHOT_API_PATH}/:syncId`,
+    `${DEVICE_SNAPSHOT_API_PATH}/:deviceId/snapshot`,
     express.raw({ type: 'application/octet-stream', limit: MAX_SNAPSHOT_BYTES }),
     (request, response) => {
-      const syncId = request.params.syncId;
+      const deviceId = decodeURIComponent(request.params.deviceId);
       const body = request.body;
 
       if (!Buffer.isBuffer(body) || body.length === 0) {
@@ -81,10 +85,12 @@ export async function createDevToolsServer(
 
       const kindHeader = request.header(SNAPSHOT_KIND_HEADER);
       const mimeHeader = request.header(SNAPSHOT_MIME_HEADER);
+      const nameHeader = request.header(SNAPSHOT_NAME_HEADER);
 
-      const result = refreshCoordinator.handleSnapshotUpload(syncId, body, {
+      const result = refreshCoordinator.handleSnapshotUpload(deviceId, body, {
         kind: typeof kindHeader === 'string' ? kindHeader : undefined,
         mimeType: typeof mimeHeader === 'string' ? mimeHeader : undefined,
+        databaseName: typeof nameHeader === 'string' ? nameHeader : undefined,
       });
 
       if (!result.ok) {
@@ -95,12 +101,13 @@ export async function createDevToolsServer(
         return;
       }
 
-      response.status(201).json({ ok: true, syncId, size: body.byteLength });
+      response.status(201).json({ ok: true, deviceId, size: body.byteLength });
     },
   );
 
-  app.get(`${SNAPSHOT_API_PATH}/:syncId`, (request, response) => {
-    const snapshot = refreshCoordinator.getSnapshot(request.params.syncId);
+  app.get(`${DEVICE_SNAPSHOT_API_PATH}/:deviceId/snapshot`, (request, response) => {
+    const deviceId = decodeURIComponent(request.params.deviceId);
+    const snapshot = refreshCoordinator.getSnapshot(deviceId);
 
     if (!snapshot) {
       response.status(404).json({ ok: false, error: 'SNAPSHOT_NOT_FOUND' });
@@ -123,7 +130,7 @@ export async function createDevToolsServer(
     writeCoordinator,
   );
 
-  const syncTimeoutInterval = setInterval(() => {
+  const refreshTimeoutInterval = setInterval(() => {
     refreshCoordinator.checkTimeouts();
     writeCoordinator.checkTimeouts();
   }, 5_000);
@@ -133,6 +140,7 @@ export async function createDevToolsServer(
     httpServer.listen(port, host, () => resolve());
   });
 
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
   const url = buildDevToolsHttpUrl(displayHost, port);
   const wsUrl = buildDevToolsWsUrl(displayHost, port);
 
@@ -145,13 +153,14 @@ export async function createDevToolsServer(
     deviceRegistry,
     router,
     heartbeat,
-    syncSessions,
+    snapshotStore,
+    pendingRefreshStore,
     writeSessions,
     refreshCoordinator,
     writeCoordinator,
     close: () =>
       new Promise((resolve, reject) => {
-        clearInterval(syncTimeoutInterval);
+        clearInterval(refreshTimeoutInterval);
         heartbeat.stop();
         httpServer.close((error) => {
           if (error) {

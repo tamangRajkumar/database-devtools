@@ -3,6 +3,8 @@ import type { ConnectionState } from '../client/createDevToolsClient';
 import type { DatabaseAdapter } from '../types/adapter';
 import type { DeviceMetadata } from '../types/protocol';
 
+export type ExportState = 'idle' | 'exporting' | 'success' | 'error';
+
 export type DevToolsContextValue = {
   connectionState: ConnectionState;
   connectionError: string | null;
@@ -16,6 +18,9 @@ export type DevToolsContextValue = {
   openSettings: () => void;
   closeSettings: () => void;
   reconnect: (url: string) => void;
+  exportState: ExportState;
+  exportError: string | null;
+  exportDatabase: () => Promise<void>;
 };
 
 export const DevToolsContext = createContext<DevToolsContextValue | null>(null);

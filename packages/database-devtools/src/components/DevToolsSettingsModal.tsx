@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -24,6 +25,9 @@ export function DevToolsSettingsModal() {
     database,
     adapterError,
     reconnect,
+    exportState,
+    exportError,
+    exportDatabase,
   } = useDevTools();
 
   const [draftUrl, setDraftUrl] = useState(serverUrl);
@@ -42,6 +46,14 @@ export function DevToolsSettingsModal() {
     }
   };
 
+  const handleExportDatabase = () => {
+    void exportDatabase();
+  };
+
+  const isExporting = exportState === 'exporting';
+  const exportDisabled =
+    connectionState !== 'connected' || !database || isExporting;
+
   return (
     <Modal
       animationType="slide"
@@ -58,7 +70,10 @@ export function DevToolsSettingsModal() {
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            style={styles.scrollBody}
+          >
             <Section title="Connection">
               <ConnectionStatusBadge state={connectionState} />
               <InfoRow label="Server URL" value={serverUrl} mono />
@@ -104,9 +119,6 @@ export function DevToolsSettingsModal() {
             </Section>
 
             <Section title="Database">
-              {adapterError ? (
-                <Text style={styles.errorText}>{adapterError}</Text>
-              ) : null}
               {database ? (
                 <>
                   <InfoRow label="Kind" value={database.kind} />
@@ -120,6 +132,44 @@ export function DevToolsSettingsModal() {
               )}
             </Section>
           </ScrollView>
+
+          <View style={styles.exportFooter}>
+            {adapterError ? <Text style={styles.errorText}>{adapterError}</Text> : null}
+            {database ? (
+              <>
+                <Pressable
+                  accessibilityLabel="Export database to web inspector"
+                  accessibilityState={{ busy: isExporting, disabled: exportDisabled }}
+                  disabled={exportDisabled}
+                  onPress={handleExportDatabase}
+                  style={[
+                    styles.exportButton,
+                    exportDisabled && !isExporting && styles.exportButtonDisabled,
+                  ]}
+                >
+                  <View style={styles.exportButtonContent}>
+                    {isExporting ? (
+                      <ActivityIndicator color="#f8fafc" size="small" />
+                    ) : null}
+                    <Text style={styles.exportLabel}>
+                      {isExporting ? 'Exporting…' : 'Export Database'}
+                    </Text>
+                  </View>
+                </Pressable>
+                {connectionState !== 'connected' ? (
+                  <Text style={styles.hintText}>Connect to the hub before exporting.</Text>
+                ) : null}
+                {exportState === 'success' ? (
+                  <Text style={styles.successText}>Sent to web inspector</Text>
+                ) : null}
+                {exportError ? <Text style={styles.errorText}>{exportError}</Text> : null}
+              </>
+            ) : (
+              <Text style={styles.placeholder}>
+                {adapterError ? 'Adapter not connected' : 'No adapter connected'}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -165,6 +215,11 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '85%',
+    overflow: 'hidden',
+  },
+  scrollBody: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   header: {
     flexDirection: 'row',
@@ -184,6 +239,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2563eb',
     fontWeight: '600',
+  },
+  exportFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
   },
   content: {
     padding: 20,
@@ -240,6 +304,33 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 15,
     fontWeight: '600',
+  },
+  exportButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  exportButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  exportButtonDisabled: {
+    opacity: 0.5,
+  },
+  exportLabel: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  successText: {
+    fontSize: 13,
+    color: '#15803d',
   },
   placeholder: {
     fontSize: 14,

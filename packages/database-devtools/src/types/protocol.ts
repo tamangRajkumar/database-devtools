@@ -16,11 +16,12 @@ export const MessageType = {
   DEVICE_STATUS: 'deviceStatus',
   BROADCAST: 'broadcast',
   REFRESH_REQUEST: 'refreshRequest',
-  SYNC_DATABASE: 'syncDatabase',
-  SYNC_STATUS: 'syncStatus',
-  DATABASE_READY: 'databaseReady',
-  SYNC_ERROR: 'syncError',
-  EXPORT_FAILED: 'exportFailed',
+  SNAPSHOT_UPLOAD_REQUESTED: 'snapshotUploadRequested',
+  REFRESH_STATUS: 'refreshStatus',
+  SNAPSHOT_READY: 'snapshotReady',
+  REFRESH_ERROR: 'refreshError',
+  EXPORT_SNAPSHOT_REQUEST: 'exportSnapshotRequest',
+  EXPORT_SNAPSHOT_ERROR: 'exportSnapshotError',
   BEGIN_TRANSACTION_REQUEST: 'beginTransactionRequest',
   COMMIT_TRANSACTION_REQUEST: 'commitTransactionRequest',
   ROLLBACK_TRANSACTION_REQUEST: 'rollbackTransactionRequest',
@@ -101,7 +102,9 @@ export interface BroadcastMessage extends DevToolsMessageBase {
   payload: unknown;
 }
 
-export type SyncState =
+export type RefreshType = 'snapshot';
+
+export type RefreshState =
   | 'requested'
   | 'exporting'
   | 'uploading'
@@ -109,64 +112,76 @@ export type SyncState =
   | 'failed'
   | 'timeout';
 
-export type SyncErrorCode =
+/** @deprecated Use RefreshState */
+export type SyncState = RefreshState;
+
+export type RefreshErrorCode =
   | 'DEVICE_OFFLINE'
-  | 'SYNC_IN_PROGRESS'
+  | 'REFRESH_IN_PROGRESS'
   | 'EXPORT_FAILED'
   | 'UPLOAD_FAILED'
   | 'TIMEOUT'
   | 'SNAPSHOT_NOT_FOUND'
   | 'INVALID_REQUEST';
 
+/** @deprecated Use RefreshErrorCode */
+export type SyncErrorCode = RefreshErrorCode;
+
 /** Browser → Server: request a database snapshot from a mobile device. */
 export interface RefreshRequestMessage extends DevToolsMessageBase {
   type: typeof MessageType.REFRESH_REQUEST;
-  syncId: string;
   deviceId: string;
+  refreshType: RefreshType;
 }
 
-/** Server → Mobile: export database and upload to the given URL. */
-export interface SyncDatabaseMessage extends DevToolsMessageBase {
-  type: typeof MessageType.SYNC_DATABASE;
-  syncId: string;
-  uploadUrl: string;
+/** Server → Mobile: export database and upload via REST. */
+export interface SnapshotUploadRequestedMessage extends DevToolsMessageBase {
+  type: typeof MessageType.SNAPSHOT_UPLOAD_REQUESTED;
+  deviceId: string;
+  refreshType: RefreshType;
 }
 
-/** Server → Browser: sync progress update. */
-export interface SyncStatusMessage extends DevToolsMessageBase {
-  type: typeof MessageType.SYNC_STATUS;
-  syncId: string;
+/** Server → Browser: refresh progress update. */
+export interface RefreshStatusMessage extends DevToolsMessageBase {
+  type: typeof MessageType.REFRESH_STATUS;
   deviceId: string;
-  state: SyncState;
+  state: RefreshState;
+  message?: string;
 }
 
 /** Server → Browser: snapshot uploaded and ready to download. */
-export interface DatabaseReadyMessage extends DevToolsMessageBase {
-  type: typeof MessageType.DATABASE_READY;
-  syncId: string;
+export interface SnapshotReadyMessage extends DevToolsMessageBase {
+  type: typeof MessageType.SNAPSHOT_READY;
   deviceId: string;
   size: number;
   exportedAt: number;
-  downloadUrl: string;
   kind: string;
   mimeType: string;
+  databaseName?: string;
 }
 
-/** Server → Browser: sync failed. */
-export interface SyncErrorMessage extends DevToolsMessageBase {
-  type: typeof MessageType.SYNC_ERROR;
-  syncId: string;
-  deviceId?: string;
-  code: SyncErrorCode;
+/** Server → Browser: refresh failed. */
+export interface RefreshErrorMessage extends DevToolsMessageBase {
+  type: typeof MessageType.REFRESH_ERROR;
+  deviceId: string;
+  code: RefreshErrorCode;
   message: string;
 }
 
-/** Mobile → Server: export or upload failed on device. */
-export interface ExportFailedMessage extends DevToolsMessageBase {
-  type: typeof MessageType.EXPORT_FAILED;
-  syncId: string;
+/** Mobile → Server: push database snapshot to the web inspector. */
+export interface ExportSnapshotRequestMessage extends DevToolsMessageBase {
+  type: typeof MessageType.EXPORT_SNAPSHOT_REQUEST;
+  refreshType: RefreshType;
+}
+
+/** Server → Mobile: export request failed before upload. */
+export interface ExportSnapshotErrorMessage extends DevToolsMessageBase {
+  type: typeof MessageType.EXPORT_SNAPSHOT_ERROR;
+  code: RefreshErrorCode;
   message: string;
 }
+
+export type RefreshInitiator = 'browser' | 'mobile';
 
 export type TransactionStatusState =
   | 'idle'
@@ -290,7 +305,7 @@ export type ClientMessage =
   | RegisterMessage
   | PongMessage
   | RefreshRequestMessage
-  | ExportFailedMessage
+  | ExportSnapshotRequestMessage
   | BeginTransactionRequestMessage
   | CommitTransactionRequestMessage
   | RollbackTransactionRequestMessage
@@ -302,10 +317,11 @@ export type ServerMessage =
   | PingMessage
   | DeviceStatusMessage
   | BroadcastMessage
-  | SyncDatabaseMessage
-  | SyncStatusMessage
-  | DatabaseReadyMessage
-  | SyncErrorMessage
+  | SnapshotUploadRequestedMessage
+  | RefreshStatusMessage
+  | SnapshotReadyMessage
+  | RefreshErrorMessage
+  | ExportSnapshotErrorMessage
   | BeginTransactionMessage
   | CommitTransactionMessage
   | RollbackTransactionMessage
@@ -326,9 +342,15 @@ export const HEARTBEAT_INTERVAL_MS = 30_000;
 
 export const HEARTBEAT_TIMEOUT_MS = 10_000;
 
-export const SNAPSHOT_API_PATH = '/api/snapshots';
+export const DEVICE_SNAPSHOT_API_PATH = '/api/devices';
 
-export const SYNC_TIMEOUT_MS = 60_000;
+/** @deprecated Use DEVICE_SNAPSHOT_API_PATH */
+export const SNAPSHOT_API_PATH = DEVICE_SNAPSHOT_API_PATH;
+
+export const REFRESH_TIMEOUT_MS = 60_000;
+
+/** @deprecated Use REFRESH_TIMEOUT_MS */
+export const SYNC_TIMEOUT_MS = REFRESH_TIMEOUT_MS;
 
 export const WRITE_TRANSACTION_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -354,9 +376,14 @@ export function buildDevToolsWsUrl(
   return `ws://${host}:${port}${DEVTOOLS_WS_PATH}`;
 }
 
-export function buildSnapshotUrl(httpBaseUrl: string, syncId: string): string {
+export function buildDeviceSnapshotUrl(httpBaseUrl: string, deviceId: string): string {
   const base = httpBaseUrl.replace(/\/$/, '');
-  return `${base}${SNAPSHOT_API_PATH}/${syncId}`;
+  return `${base}${DEVICE_SNAPSHOT_API_PATH}/${encodeURIComponent(deviceId)}/snapshot`;
+}
+
+/** @deprecated Use buildDeviceSnapshotUrl */
+export function buildSnapshotUrl(httpBaseUrl: string, deviceId: string): string {
+  return buildDeviceSnapshotUrl(httpBaseUrl, deviceId);
 }
 
 export function wsUrlToHttpUrl(wsUrl: string): string {
@@ -398,16 +425,73 @@ export function isRefreshRequestMessage(value: unknown): value is RefreshRequest
   }
 
   const message = value as RefreshRequestMessage;
-  return typeof message.syncId === 'string' && typeof message.deviceId === 'string';
+  return typeof message.deviceId === 'string' && message.refreshType === 'snapshot';
 }
 
-export function isExportFailedMessage(value: unknown): value is ExportFailedMessage {
-  if (!hasMessageType(value) || value.type !== MessageType.EXPORT_FAILED) {
+export function isSnapshotUploadRequestedMessage(
+  value: unknown,
+): value is SnapshotUploadRequestedMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.SNAPSHOT_UPLOAD_REQUESTED) {
     return false;
   }
 
-  const message = value as ExportFailedMessage;
-  return typeof message.syncId === 'string' && typeof message.message === 'string';
+  const message = value as SnapshotUploadRequestedMessage;
+  return typeof message.deviceId === 'string' && message.refreshType === 'snapshot';
+}
+
+export function isRefreshStatusMessage(value: unknown): value is RefreshStatusMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.REFRESH_STATUS) {
+    return false;
+  }
+
+  const message = value as RefreshStatusMessage;
+  return typeof message.deviceId === 'string' && typeof message.state === 'string';
+}
+
+export function isSnapshotReadyMessage(value: unknown): value is SnapshotReadyMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.SNAPSHOT_READY) {
+    return false;
+  }
+
+  const message = value as SnapshotReadyMessage;
+  return (
+    typeof message.deviceId === 'string' &&
+    typeof message.size === 'number' &&
+    typeof message.exportedAt === 'number' &&
+    typeof message.kind === 'string' &&
+    typeof message.mimeType === 'string'
+  );
+}
+
+export function isRefreshErrorMessage(value: unknown): value is RefreshErrorMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.REFRESH_ERROR) {
+    return false;
+  }
+
+  const message = value as RefreshErrorMessage;
+  return typeof message.deviceId === 'string' && typeof message.code === 'string';
+}
+
+export function isExportSnapshotRequestMessage(
+  value: unknown,
+): value is ExportSnapshotRequestMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.EXPORT_SNAPSHOT_REQUEST) {
+    return false;
+  }
+
+  const message = value as ExportSnapshotRequestMessage;
+  return message.refreshType === 'snapshot';
+}
+
+export function isExportSnapshotErrorMessage(
+  value: unknown,
+): value is ExportSnapshotErrorMessage {
+  if (!hasMessageType(value) || value.type !== MessageType.EXPORT_SNAPSHOT_ERROR) {
+    return false;
+  }
+
+  const message = value as ExportSnapshotErrorMessage;
+  return typeof message.code === 'string' && typeof message.message === 'string';
 }
 
 export function isBeginTransactionRequestMessage(
@@ -489,7 +573,7 @@ export function isClientMessage(value: unknown): value is ClientMessage {
     isRegisterMessage(value) ||
     isPongMessage(value) ||
     isRefreshRequestMessage(value) ||
-    isExportFailedMessage(value) ||
+    isExportSnapshotRequestMessage(value) ||
     isBeginTransactionRequestMessage(value) ||
     isCommitTransactionRequestMessage(value) ||
     isRollbackTransactionRequestMessage(value) ||
@@ -523,54 +607,6 @@ export function isBroadcastMessage(value: unknown): value is BroadcastMessage {
   }
 
   return true;
-}
-
-export function isSyncDatabaseMessage(value: unknown): value is SyncDatabaseMessage {
-  if (!hasMessageType(value) || value.type !== MessageType.SYNC_DATABASE) {
-    return false;
-  }
-
-  const message = value as SyncDatabaseMessage;
-  return typeof message.syncId === 'string' && typeof message.uploadUrl === 'string';
-}
-
-export function isSyncStatusMessage(value: unknown): value is SyncStatusMessage {
-  if (!hasMessageType(value) || value.type !== MessageType.SYNC_STATUS) {
-    return false;
-  }
-
-  const message = value as SyncStatusMessage;
-  return (
-    typeof message.syncId === 'string' &&
-    typeof message.deviceId === 'string' &&
-    typeof message.state === 'string'
-  );
-}
-
-export function isDatabaseReadyMessage(value: unknown): value is DatabaseReadyMessage {
-  if (!hasMessageType(value) || value.type !== MessageType.DATABASE_READY) {
-    return false;
-  }
-
-  const message = value as DatabaseReadyMessage;
-  return (
-    typeof message.syncId === 'string' &&
-    typeof message.deviceId === 'string' &&
-    typeof message.size === 'number' &&
-    typeof message.exportedAt === 'number' &&
-    typeof message.downloadUrl === 'string' &&
-    typeof message.kind === 'string' &&
-    typeof message.mimeType === 'string'
-  );
-}
-
-export function isSyncErrorMessage(value: unknown): value is SyncErrorMessage {
-  if (!hasMessageType(value) || value.type !== MessageType.SYNC_ERROR) {
-    return false;
-  }
-
-  const message = value as SyncErrorMessage;
-  return typeof message.syncId === 'string' && typeof message.code === 'string';
 }
 
 export function isBeginTransactionMessage(value: unknown): value is BeginTransactionMessage {
@@ -654,10 +690,11 @@ export function isServerMessage(value: unknown): value is ServerMessage {
     isPingMessage(value) ||
     isDeviceStatusMessage(value) ||
     isBroadcastMessage(value) ||
-    isSyncDatabaseMessage(value) ||
-    isSyncStatusMessage(value) ||
-    isDatabaseReadyMessage(value) ||
-    isSyncErrorMessage(value) ||
+    isSnapshotUploadRequestedMessage(value) ||
+    isRefreshStatusMessage(value) ||
+    isSnapshotReadyMessage(value) ||
+    isRefreshErrorMessage(value) ||
+    isExportSnapshotErrorMessage(value) ||
     isBeginTransactionMessage(value) ||
     isCommitTransactionMessage(value) ||
     isRollbackTransactionMessage(value) ||

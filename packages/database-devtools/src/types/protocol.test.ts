@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  isDatabaseReadyMessage,
+  isExportSnapshotRequestMessage,
   isRefreshRequestMessage,
   isRegisterMessage,
+  isSnapshotReadyMessage,
   MessageType,
 } from './protocol';
 
@@ -31,36 +32,52 @@ describe('protocol type guards', () => {
       isRefreshRequestMessage({
         type: MessageType.REFRESH_REQUEST,
         timestamp: Date.now(),
-        syncId: 'sync-1',
         deviceId: 'device-1',
+        refreshType: 'snapshot',
+      }),
+    ).toBe(true);
+
+    expect(
+      isRefreshRequestMessage({
+        type: MessageType.REFRESH_REQUEST,
+        timestamp: Date.now(),
+        deviceId: 'device-1',
+        refreshType: 'other',
+      }),
+    ).toBe(false);
+  });
+
+  it('validates export snapshot request messages', () => {
+    expect(
+      isExportSnapshotRequestMessage({
+        type: MessageType.EXPORT_SNAPSHOT_REQUEST,
+        timestamp: Date.now(),
+        refreshType: 'snapshot',
       }),
     ).toBe(true);
   });
 
-  it('validates database ready messages with kind and mimeType', () => {
+  it('validates snapshot ready messages with kind and mimeType', () => {
     expect(
-      isDatabaseReadyMessage({
-        type: MessageType.DATABASE_READY,
+      isSnapshotReadyMessage({
+        type: MessageType.SNAPSHOT_READY,
         timestamp: Date.now(),
-        syncId: 'sync-1',
         deviceId: 'device-1',
         size: 128,
         exportedAt: Date.now(),
-        downloadUrl: 'http://localhost/snap',
         kind: 'sqlite',
         mimeType: 'application/x-sqlite3',
+        databaseName: 'booking.db',
       }),
     ).toBe(true);
 
     expect(
-      isDatabaseReadyMessage({
-        type: MessageType.DATABASE_READY,
+      isSnapshotReadyMessage({
+        type: MessageType.SNAPSHOT_READY,
         timestamp: Date.now(),
-        syncId: 'sync-1',
         deviceId: 'device-1',
         size: 128,
         exportedAt: Date.now(),
-        downloadUrl: 'http://localhost/snap',
       }),
     ).toBe(false);
   });

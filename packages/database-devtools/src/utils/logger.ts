@@ -46,16 +46,31 @@ export const logger = {
     log(RED, '✓', `Heartbeat timeout — removing ${connectionId}`);
   },
 
+  refreshStarted(deviceId: string): void {
+    log(CYAN, '↻', `Refresh started ${DIM}(${deviceId})${RESET}`);
+  },
+
+  refreshUploaded(deviceId: string, bytes: number): void {
+    log(GREEN, '↻', `Snapshot uploaded ${DIM}(${deviceId}, ${bytes} bytes)${RESET}`);
+  },
+
+  refreshFailed(deviceId: string, code: string, message: string): void {
+    log(RED, '↻', `Refresh failed ${DIM}(${deviceId}: ${code})${RESET} ${message}`);
+  },
+
+  /** @deprecated Use refreshStarted */
   syncStarted(syncId: string, deviceId: string): void {
-    log(CYAN, '↻', `Sync started ${DIM}(${syncId} → ${deviceId})${RESET}`);
+    this.refreshStarted(deviceId);
   },
 
+  /** @deprecated Use refreshUploaded */
   syncUploaded(syncId: string, bytes: number): void {
-    log(GREEN, '↻', `Snapshot uploaded ${DIM}(${syncId}, ${bytes} bytes)${RESET}`);
+    this.refreshUploaded(syncId, bytes);
   },
 
+  /** @deprecated Use refreshFailed */
   syncFailed(syncId: string, code: string, message: string): void {
-    log(RED, '↻', `Sync failed ${DIM}(${syncId}: ${code})${RESET} ${message}`);
+    this.refreshFailed(syncId, code, message);
   },
 
   error(message: string): void {

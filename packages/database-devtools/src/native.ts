@@ -2,53 +2,57 @@ export type {
   BroadcastMessage,
   BrowserConnectionInfo,
   ClientMessage,
-  DatabaseReadyMessage,
   DeviceMetadata,
   DeviceStatusMessage,
   DeviceStatusPayload,
   DevToolsMessage,
   DevToolsMessageBase,
-  ExportFailedMessage,
   MessageTypeValue,
   MobileDeviceInfo,
   PingMessage,
   PongMessage,
+  RefreshErrorCode,
+  RefreshErrorMessage,
   RefreshRequestMessage,
+  RefreshState,
+  RefreshStatusMessage,
+  RefreshType,
   RegisterMessage,
   ServerMessage,
-  SyncDatabaseMessage,
+  SnapshotReadyMessage,
+  SnapshotUploadRequestedMessage,
   SyncErrorCode,
-  SyncErrorMessage,
   SyncState,
-  SyncStatusMessage,
 } from './types/protocol';
 
 export {
   buildDevToolsHttpUrl,
   buildDevToolsWsUrl,
+  buildDeviceSnapshotUrl,
   buildSnapshotUrl,
   createMessage,
   DEFAULT_DEVTOOLS_HOST,
   DEFAULT_DEVTOOLS_PORT,
   DEVTOOLS_WS_PATH,
+  DEVICE_SNAPSHOT_API_PATH,
   DevToolsRole,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
   isBroadcastMessage,
   isClientMessage,
-  isDatabaseReadyMessage,
   isDeviceStatusMessage,
-  isExportFailedMessage,
   isPingMessage,
   isPongMessage,
+  isRefreshErrorMessage,
   isRefreshRequestMessage,
+  isRefreshStatusMessage,
   isRegisterMessage,
   isServerMessage,
-  isSyncDatabaseMessage,
-  isSyncErrorMessage,
-  isSyncStatusMessage,
+  isSnapshotReadyMessage,
+  isSnapshotUploadRequestedMessage,
   MAX_SNAPSHOT_BYTES,
   MessageType,
+  REFRESH_TIMEOUT_MS,
   SNAPSHOT_API_PATH,
   SYNC_TIMEOUT_MS,
   wsUrlToHttpUrl,
@@ -72,6 +76,7 @@ export type { SnapshotExport } from './types/snapshot';
 export {
   SNAPSHOT_KIND_HEADER,
   SNAPSHOT_MIME_HEADER,
+  SNAPSHOT_NAME_HEADER,
   SQLITE_SNAPSHOT_MIME_TYPE,
 } from './types/snapshot';
 export type {
@@ -105,7 +110,7 @@ export {
 export type { ConnectionState, DevToolsClient, DevToolsClientOptions, TransactionState } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
 export { fetchSnapshot } from './client/fetchSnapshot';
-export { handleSyncDatabase } from './client/handleSyncDatabase';
+export { handleDeviceSnapshotUpload } from './client/handleDeviceSnapshot';
 export type { DatabaseDevToolsProps } from './components/DatabaseDevTools';
 export { DatabaseDevTools } from './components/DatabaseDevTools';
 export {

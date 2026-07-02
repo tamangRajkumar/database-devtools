@@ -4,29 +4,30 @@ import {
   DevToolsRole,
   isBeginTransactionMessage,
   isCommitTransactionMessage,
-  isDatabaseReadyMessage,
   isDeviceStatusMessage,
   isExecuteWriteMessage,
+  isExportSnapshotErrorMessage,
   isPingMessage,
+  isRefreshErrorMessage,
+  isRefreshStatusMessage,
   isRollbackTransactionMessage,
-  isSyncDatabaseMessage,
-  isSyncErrorMessage,
-  isSyncStatusMessage,
+  isSnapshotReadyMessage,
+  isSnapshotUploadRequestedMessage,
   isTransactionStatusMessage,
   isWriteErrorMessage,
   isWriteResultMessage,
   MessageType,
   type ClientMessage,
-  type DatabaseReadyMessage,
   type DeviceMetadata,
   type DeviceStatusPayload,
-  type ExportFailedMessage,
+  type ExportSnapshotErrorMessage,
   type PongMessage,
+  type RefreshErrorMessage,
   type RefreshRequestMessage,
+  type RefreshStatusMessage,
   type RegisterMessage,
-  type SyncDatabaseMessage,
-  type SyncErrorMessage,
-  type SyncStatusMessage,
+  type SnapshotReadyMessage,
+  type SnapshotUploadRequestedMessage,
   type TransactionAckMessage,
   type TransactionStatusMessage,
   type WriteAckMessage,
@@ -34,7 +35,7 @@ import {
   type WriteResultMessage,
 } from '../types/protocol';
 import type { WriteOperation } from '../types/write';
-import { generateDeviceId, generateSyncId, generateTransactionId, generateWriteId } from '../utils/ids';
+import { generateDeviceId, generateTransactionId, generateWriteId } from '../utils/ids';
 import { ReconnectScheduler } from '../utils/reconnect';
 
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -51,10 +52,11 @@ export type DevToolsClientOptions = {
   onDisconnect?: () => void;
   onConnectionStateChange?: (state: ConnectionState) => void;
   onDeviceStatus?: (status: DeviceStatusPayload) => void;
-  onSyncDatabase?: (message: SyncDatabaseMessage) => void;
-  onSyncStatus?: (message: SyncStatusMessage) => void;
-  onDatabaseReady?: (message: DatabaseReadyMessage) => void;
-  onSyncError?: (message: SyncErrorMessage) => void;
+  onSnapshotUploadRequested?: (message: SnapshotUploadRequestedMessage) => void;
+  onExportSnapshotError?: (message: ExportSnapshotErrorMessage) => void;
+  onRefreshStatus?: (message: RefreshStatusMessage) => void;
+  onSnapshotReady?: (message: SnapshotReadyMessage) => void;
+  onRefreshError?: (message: RefreshErrorMessage) => void;
   onBeginTransaction?: (message: import('../types/protocol').BeginTransactionMessage) => void;
   onCommitTransaction?: (message: import('../types/protocol').CommitTransactionMessage) => void;
   onRollbackTransaction?: (message: import('../types/protocol').RollbackTransactionMessage) => void;
@@ -76,8 +78,8 @@ export type DevToolsClient = {
   getServerUrl: () => string;
   setServerUrl: (url: string) => void;
   send: (message: ClientMessageInput) => void;
-  requestRefresh: (deviceId: string) => string;
-  reportExportFailed: (syncId: string, message: string) => void;
+  requestRefresh: (deviceId: string) => void;
+  requestExportSnapshot: () => void;
   sendTransactionAck: (message: Omit<TransactionAckMessage, 'timestamp' | 'type'>) => void;
   sendWriteAck: (message: Omit<WriteAckMessage, 'timestamp' | 'type'>) => void;
   beginTransaction: (deviceId: string) => Promise<void>;
@@ -92,7 +94,7 @@ type ClientMessageInput =
   | Omit<RegisterMessage, 'timestamp'>
   | Omit<PongMessage, 'timestamp'>
   | Omit<RefreshRequestMessage, 'timestamp'>
-  | Omit<ExportFailedMessage, 'timestamp'>
+  | Omit<import('../types/protocol').ExportSnapshotRequestMessage, 'timestamp'>
   | Omit<TransactionAckMessage, 'timestamp'>
   | Omit<WriteAckMessage, 'timestamp'>
   | Omit<import('../types/protocol').BeginTransactionRequestMessage, 'timestamp'>
@@ -219,23 +221,28 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
       return;
     }
 
-    if (isSyncDatabaseMessage(parsed)) {
-      options.onSyncDatabase?.(parsed);
+    if (isSnapshotUploadRequestedMessage(parsed)) {
+      options.onSnapshotUploadRequested?.(parsed);
       return;
     }
 
-    if (isSyncStatusMessage(parsed)) {
-      options.onSyncStatus?.(parsed);
+    if (isExportSnapshotErrorMessage(parsed)) {
+      options.onExportSnapshotError?.(parsed);
       return;
     }
 
-    if (isDatabaseReadyMessage(parsed)) {
-      options.onDatabaseReady?.(parsed);
+    if (isRefreshStatusMessage(parsed)) {
+      options.onRefreshStatus?.(parsed);
       return;
     }
 
-    if (isSyncErrorMessage(parsed)) {
-      options.onSyncError?.(parsed);
+    if (isSnapshotReadyMessage(parsed)) {
+      options.onSnapshotReady?.(parsed);
+      return;
+    }
+
+    if (isRefreshErrorMessage(parsed)) {
+      options.onRefreshError?.(parsed);
       return;
     }
 
@@ -409,23 +416,18 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     }
   };
 
-  const requestRefresh = (targetDeviceId: string): string => {
-    const syncId = generateSyncId();
-
+  const requestRefresh = (targetDeviceId: string): void => {
     send({
       type: MessageType.REFRESH_REQUEST,
-      syncId,
       deviceId: targetDeviceId,
+      refreshType: 'snapshot',
     });
-
-    return syncId;
   };
 
-  const reportExportFailed = (syncId: string, message: string): void => {
+  const requestExportSnapshot = (): void => {
     send({
-      type: MessageType.EXPORT_FAILED,
-      syncId,
-      message,
+      type: MessageType.EXPORT_SNAPSHOT_REQUEST,
+      refreshType: 'snapshot',
     });
   };
 
@@ -591,7 +593,7 @@ export function createDevToolsClient(options: DevToolsClientOptions = {}): DevTo
     setServerUrl,
     send,
     requestRefresh,
-    reportExportFailed,
+    requestExportSnapshot,
     sendTransactionAck,
     sendWriteAck,
     beginTransaction,

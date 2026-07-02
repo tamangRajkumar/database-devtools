@@ -5,7 +5,7 @@ import {
   DevToolsRole,
   isBeginTransactionRequestMessage,
   isCommitTransactionRequestMessage,
-  isExportFailedMessage,
+  isExportSnapshotRequestMessage,
   isPongMessage,
   isRefreshRequestMessage,
   isRegisterMessage,
@@ -95,6 +95,11 @@ export function attachWebSocket(
         return;
       }
 
+      if (isExportSnapshotRequestMessage(parsed)) {
+        refreshCoordinator.handleMobileExportRequest(socket, parsed);
+        return;
+      }
+
       if (isBeginTransactionRequestMessage(parsed)) {
         writeCoordinator.handleBeginTransactionRequest(socket, parsed);
         return;
@@ -112,11 +117,6 @@ export function attachWebSocket(
 
       if (isWriteRequestMessage(parsed)) {
         writeCoordinator.handleWriteRequest(socket, parsed);
-        return;
-      }
-
-      if (isExportFailedMessage(parsed)) {
-        refreshCoordinator.handleExportFailed(parsed.syncId, parsed.message);
         return;
       }
 

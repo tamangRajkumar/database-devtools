@@ -112,8 +112,12 @@ export function OverviewPanel() {
                 <dd>{formatTimestamp(snapshotMeta.exportedAt)}</dd>
               </div>
               <div className="meta-list__row">
-                <dt>Sync ID</dt>
-                <dd className="mono">{snapshotMeta.syncId}</dd>
+                <dt>Database</dt>
+                <dd>{snapshotMeta.databaseName ?? snapshotMeta.kind}</dd>
+              </div>
+              <div className="meta-list__row">
+                <dt>Device ID</dt>
+                <dd className="mono">{snapshotMeta.deviceId}</dd>
               </div>
             </dl>
           </article>
