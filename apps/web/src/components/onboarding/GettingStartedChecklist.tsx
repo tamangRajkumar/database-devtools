@@ -1,22 +1,47 @@
+import { useMemo, useState } from 'react';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { useDevTools } from '../../context/DevToolsContext';
 
 type GettingStartedChecklistProps = {
   onOpenWorkspace?: () => void;
 };
 
-export function GettingStartedChecklist({ onOpenWorkspace }: GettingStartedChecklistProps) {
+export function GettingStartedChecklist(_props: GettingStartedChecklistProps) {
   const { visible, steps, dismiss } = useOnboarding();
-  const { refresh, hasDatabase, refreshState } = useDevTools();
+  const [expanded, setExpanded] = useState(false);
+
+  const doneCount = useMemo(() => steps.filter((step) => step.done).length, [steps]);
+  const compact = doneCount >= 3;
 
   if (!visible) {
     return null;
   }
 
+  if (compact && !expanded) {
+    return (
+      <aside className="getting-started getting-started--compact" aria-label="Getting started progress">
+        <div className="getting-started__compact-row">
+          <span className="getting-started__compact-label">
+            Getting started: {doneCount}/{steps.length} complete
+          </span>
+          <div className="getting-started__compact-actions">
+            <button type="button" className="getting-started__dismiss" onClick={() => setExpanded(true)}>
+              Show steps
+            </button>
+            <button type="button" className="getting-started__dismiss" onClick={dismiss}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="getting-started" aria-label="Getting started checklist">
       <div className="getting-started__header">
-        <h2 className="getting-started__title">Getting started</h2>
+        <h2 className="getting-started__title">
+          Getting started <span className="getting-started__progress">({doneCount}/{steps.length})</span>
+        </h2>
         <button type="button" className="getting-started__dismiss" onClick={dismiss}>
           Dismiss
         </button>
@@ -34,23 +59,9 @@ export function GettingStartedChecklist({ onOpenWorkspace }: GettingStartedCheck
           </li>
         ))}
       </ol>
-      <div className="getting-started__actions">
-        {!hasDatabase && (
-          <button
-            type="button"
-            className="refresh-button"
-            disabled={refreshState === 'refreshing'}
-            onClick={refresh}
-          >
-            {refreshState === 'refreshing' ? 'Refreshing…' : 'Refresh database'}
-          </button>
-        )}
-        {hasDatabase && onOpenWorkspace && (
-          <button type="button" className="sql-toolbar__secondary" onClick={onOpenWorkspace}>
-            Open Workspace
-          </button>
-        )}
-      </div>
+      <p className="getting-started__hint">
+        Use the status card below for Refresh and Open Workspace actions.
+      </p>
     </aside>
   );
 }

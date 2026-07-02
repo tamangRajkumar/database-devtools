@@ -54,8 +54,15 @@ export function WorkspacePanel() {
 
   if (!selectedDevice) {
     return (
-      <section className="panel panel--workspace">
-        <WorkspaceEmptyState />
+      <section className="panel panel--workspace panel--workspace-empty">
+        <div className="workspace-empty workspace-empty--centered">
+          <div>
+            <p className="workspace-empty__title">No device selected</p>
+            <p className="workspace-empty__text">
+              Connect a mobile app with Database DevTools enabled, then select it in the toolbar.
+            </p>
+          </div>
+        </div>
       </section>
     );
   }
@@ -89,7 +96,10 @@ export function WorkspacePanel() {
           <WorkspaceEmptyState />
 
           <div className="workspace__editor-area" ref={splitContainerRef}>
-            <div className="workspace__editor-pane" style={{ flexBasis: `${editorSplitRatio * 100}%` }}>
+            <div
+              className="workspace__editor-pane"
+              style={{ flexGrow: editorSplitRatio, flexShrink: 1, flexBasis: 0, minHeight: 120 }}
+            >
               <SqlToolbar />
               <SqlEditor
                 value={sql}
@@ -104,7 +114,10 @@ export function WorkspacePanel() {
               onResize={setEditorSplitRatio}
             />
 
-            <div className="workspace__results-pane" style={{ flexBasis: `${(1 - editorSplitRatio) * 100}%` }}>
+            <div
+              className="workspace__results-pane"
+              style={{ flexGrow: 1 - editorSplitRatio, flexShrink: 1, flexBasis: 0, minHeight: 160 }}
+            >
               <BottomPanel />
             </div>
           </div>

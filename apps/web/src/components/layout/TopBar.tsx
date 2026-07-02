@@ -11,10 +11,11 @@ type TopBarProps = {
 };
 
 export function TopBar({ onMenuToggle }: TopBarProps) {
-  const { connectionState } = useDevTools();
+  const { connectionState, refreshError } = useDevTools();
+  const hubOffline = connectionState !== 'connected';
 
   return (
-    <header className="top-bar">
+    <div className="top-bar">
       <div className="top-bar__left">
         <button
           type="button"
@@ -44,12 +45,25 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
       </div>
 
       <div className="top-bar__right">
+        {hubOffline && (
+          <span
+            className="top-bar__hub-chip"
+            title="Start the CLI with pnpm dev:cli in the database-devtools folder"
+          >
+            Hub offline
+          </span>
+        )}
+        {refreshError && !hubOffline && (
+          <span className="top-bar__hub-chip top-bar__hub-chip--error" title={refreshError}>
+            Refresh failed
+          </span>
+        )}
         <ActivityIndicator />
         <EditModeToggle />
         <RefreshButton />
         <StatusBadge state={connectionState} label={`Hub ${connectionState}`} />
         <ThemeToggle />
       </div>
-    </header>
+    </div>
   );
 }

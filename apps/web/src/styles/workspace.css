@@ -2,17 +2,24 @@
   max-width: none;
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
   height: 100%;
+}
+
+.panel--workspace-empty {
+  align-items: center;
+  justify-content: center;
 }
 
 .workspace {
   display: grid;
   grid-template-columns: 260px 1fr;
-  gap: 0.75rem;
+  gap: 0;
   flex: 1;
   min-height: 0;
   height: 100%;
+  border-top: 1px solid var(--border);
 }
 
 .workspace--explorer-collapsed {
@@ -21,8 +28,8 @@
 
 .workspace__explorer {
   min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
   background: var(--bg-surface);
   overflow: hidden;
 }
@@ -30,10 +37,11 @@
 .workspace__main {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
   min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border: none;
+  border-radius: 0;
   background: var(--bg-surface);
   overflow: hidden;
 }
@@ -82,19 +90,6 @@
   overflow: hidden;
 }
 
-.workspace__editor-pane {
-  flex-shrink: 0;
-}
-
-.workspace__results-pane {
-  flex: 1;
-}
-
-.workspace__editor-pane .sql-editor-cm {
-  flex: 1;
-  min-height: 0;
-}
-
 .workspace-empty {
   display: flex;
   align-items: center;
@@ -108,7 +103,16 @@
 }
 
 .workspace-empty--inline {
-  margin-top: 0;
+  flex-shrink: 0;
+  margin: 0.5rem 0.75rem 0;
+}
+
+.workspace-empty--centered {
+  margin: 0;
+  max-width: 28rem;
+  text-align: center;
+  justify-content: center;
+  border-style: dashed;
 }
 
 .workspace-empty__title {
@@ -228,6 +232,10 @@
 
 .object-explorer__hint-block {
   margin: 0.25rem 0 0.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .object-explorer__header .explorer-search {
@@ -616,6 +624,11 @@
   background: transparent;
 }
 
+.workspace__editor-pane .sql-editor-cm {
+  flex: 1;
+  min-height: 0;
+}
+
 .query-results-grid {
   display: flex;
   flex-direction: column;
@@ -648,7 +661,7 @@
 @media (max-width: 1024px) {
   .workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(180px, 240px) 1fr;
+    grid-template-rows: minmax(160px, 28vh) 1fr;
   }
 
   .workspace--explorer-collapsed {
@@ -656,7 +669,9 @@
   }
 
   .workspace__explorer {
-    max-height: 240px;
+    max-height: 28vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
   }
 }
 

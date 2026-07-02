@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { GlobalConfirmDialog } from '../edit/ConfirmDialog';
 import { EditModeBanner } from '../edit/EditModeBanner';
 import { TransactionBar } from '../edit/TransactionBar';
-import { GettingStartedChecklist } from '../onboarding/GettingStartedChecklist';
 import { ToastViewport } from '../ToastViewport';
 import { StatusBar } from '../workspace/StatusBar';
 import { MainContent } from './MainContent';
@@ -35,29 +34,35 @@ export function DevToolsShell() {
   const openWorkspace = () => setActiveNav(NavItem.WORKSPACE);
 
   return (
-    <div className="devtools-shell">
-      <TopBar onMenuToggle={() => setSidebarOpen((open) => !open)} />
-      <ConnectionHelpBanner />
-      <EditModeBanner />
-      <TransactionBar />
+    <>
+      <div className="devtools-shell">
+        <header className="devtools-shell__header">
+          <TopBar onMenuToggle={() => setSidebarOpen((open) => !open)} />
+          <div className="devtools-chrome">
+            <ConnectionHelpBanner />
+            <EditModeBanner />
+            <TransactionBar />
+          </div>
+        </header>
+
+        <div className={`devtools-body ${navCollapsed ? 'devtools-body--nav-collapsed' : ''}`}>
+          <Sidebar
+            activeNav={activeNav}
+            collapsed={navCollapsed}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            onNavChange={setActiveNav}
+            onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
+          />
+          <MainContent activeNav={activeNav} onNavigate={setActiveNav} />
+        </div>
+
+        <StatusBar />
+      </div>
+
       <GlobalConfirmDialog />
       <ToastViewport />
       <FirstDatabaseWorkspaceRedirect onOpenWorkspace={openWorkspace} />
-      <div className={`devtools-body ${navCollapsed ? 'devtools-body--nav-collapsed' : ''}`}>
-        <Sidebar
-          activeNav={activeNav}
-          collapsed={navCollapsed}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          onNavChange={setActiveNav}
-          onToggleCollapse={() => setNavCollapsed(!navCollapsed)}
-        />
-        <div className="devtools-main">
-          <GettingStartedChecklist onOpenWorkspace={openWorkspace} />
-          <MainContent activeNav={activeNav} onNavigate={setActiveNav} />
-        </div>
-      </div>
-      <StatusBar />
-    </div>
+    </>
   );
 }

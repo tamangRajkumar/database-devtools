@@ -1,11 +1,24 @@
+import { useDevTools } from '../../context/DevToolsContext';
 import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { RefreshButton } from '../RefreshButton';
 import { QueryResultsGrid } from '../workspace/QueryResultsGrid';
 import { ResultsToolbar } from './ResultsToolbar';
 
 export function ResultsPanel() {
+  const { hasDatabase } = useDevTools();
   const { result, error, running } = useSqlWorkspace();
   const { setBottomPanelTab } = useWorkspace();
+
+  if (!hasDatabase) {
+    return (
+      <div className="sql-results explorer-empty explorer-empty--panel">
+        <p className="explorer-empty__title">No database loaded</p>
+        <p className="explorer-empty__text">Refresh to sync a snapshot from the device.</p>
+        <RefreshButton />
+      </div>
+    );
+  }
 
   if (running) {
     return (

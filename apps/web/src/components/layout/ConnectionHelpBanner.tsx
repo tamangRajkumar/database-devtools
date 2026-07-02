@@ -1,23 +1,16 @@
 import { useDevTools } from '../../context/DevToolsContext';
 
+/** Full-width banner for refresh errors only; hub status lives in the top bar. */
 export function ConnectionHelpBanner() {
-  const { connectionState, refreshError } = useDevTools();
+  const { refreshError, connectionState } = useDevTools();
 
-  if (connectionState === 'connected' && !refreshError) {
+  if (!refreshError || connectionState !== 'connected') {
     return null;
   }
 
   return (
     <div className="connection-help" role="status">
-      {connectionState !== 'connected' && (
-        <p className="connection-help__text">
-          Hub disconnected. Start the CLI with <code className="mono">pnpm dev:cli</code> in the
-          database-devtools folder.
-        </p>
-      )}
-      {refreshError && (
-        <p className="connection-help__text connection-help__text--error">{refreshError}</p>
-      )}
+      <p className="connection-help__text connection-help__text--error">{refreshError}</p>
     </div>
   );
 }
