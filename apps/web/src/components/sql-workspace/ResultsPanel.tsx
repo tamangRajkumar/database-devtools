@@ -2,14 +2,23 @@ import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';
 import { ResultsToolbar } from './ResultsToolbar';
 
 export function ResultsPanel() {
-  const { result, error } = useSqlWorkspace();
+  const { result, error, running } = useSqlWorkspace();
+
+  if (running) {
+    return (
+      <div className="sql-results explorer-empty">
+        <p>Running query…</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div className="sql-results">
+      <div className="sql-results explorer-empty">
         <p className="query-error" role="alert">
           {error}
         </p>
+        <p className="bottom-panel__placeholder">See the Messages tab for details.</p>
       </div>
     );
   }

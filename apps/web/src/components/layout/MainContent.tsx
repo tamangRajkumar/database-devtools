@@ -1,18 +1,18 @@
 import { NavItem } from '../../types/navigation';
-import { ExplorerPanel } from '../../panels/ExplorerPanel';
 import { OverviewPanel } from '../../panels/OverviewPanel';
-import { SqlWorkspacePanel } from '../../panels/SqlWorkspacePanel';
+import { WorkspacePanel } from '../../panels/WorkspacePanel';
 
 type MainContentProps = {
   activeNav: NavItem;
 };
 
 export function MainContent({ activeNav }: MainContentProps) {
+  const isWorkspace = activeNav === NavItem.WORKSPACE;
+
   return (
-    <main className="main-content">
+    <main className={`main-content ${isWorkspace ? 'main-content--workspace' : ''}`}>
       {activeNav === NavItem.OVERVIEW && <OverviewPanel />}
-      {activeNav === NavItem.EXPLORER && <ExplorerPanel />}
-      {activeNav === NavItem.SQL && <SqlWorkspacePanel />}
+      {isWorkspace && <WorkspacePanel />}
     </main>
   );
 }

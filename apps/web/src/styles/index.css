@@ -4,6 +4,7 @@
 @import './explorer.css';
 @import './edit-mode.css';
 @import './sql-workspace.css';
+@import './workspace.css';
 
 * {
   box-sizing: border-box;

@@ -2,6 +2,7 @@ import { DevToolsProvider } from './context/DevToolsContext';
 import { EditModeProvider } from './context/EditModeContext';
 import { ExplorerProvider } from './context/ExplorerContext';
 import { SqlWorkspaceProvider } from './context/SqlWorkspaceContext';
+import { WorkspaceProvider } from './context/WorkspaceContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { DevToolsShell } from './components/layout/DevToolsShell';
@@ -13,9 +14,11 @@ export function App() {
         <DevToolsProvider>
           <EditModeProvider>
             <ExplorerProvider>
-              <SqlWorkspaceProvider>
-                <DevToolsShell />
-              </SqlWorkspaceProvider>
+              <WorkspaceProvider>
+                <SqlWorkspaceProvider>
+                  <DevToolsShell />
+                </SqlWorkspaceProvider>
+              </WorkspaceProvider>
             </ExplorerProvider>
           </EditModeProvider>
         </DevToolsProvider>

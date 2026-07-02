@@ -1,5 +1,4 @@
 import { useDevTools } from '../context/DevToolsContext';
-import { PlaceholderBanner } from '../components/PlaceholderBanner';
 import { StatusBadge } from '../components/StatusBadge';
 
 function formatTimestamp(timestamp: number): string {
@@ -49,7 +48,16 @@ export function OverviewPanel() {
   return (
     <section className="panel">
       <h2 className="panel__title">Overview</h2>
-      {!hasDatabase && <PlaceholderBanner message="Click Refresh to sync the SQLite database from the device." />}
+      {!hasDatabase && (
+        <div className="workspace-empty workspace-empty--inline">
+          <div>
+            <p className="workspace-empty__title">No database loaded</p>
+            <p className="workspace-empty__text">
+              Use Refresh in the toolbar to sync the SQLite database from the device.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="card-grid">
         <article className="card">

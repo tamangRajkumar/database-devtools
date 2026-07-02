@@ -28,7 +28,8 @@ import {
 import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult, WriteOperation } from 'database-devtools';
 import { validateReadOnlySql } from '../lib/sqlSafety';
 import {
-  buildSnapshotLoadedToast,
+  formatSnapshotReceivedMessage,
+  resolveDeviceLabel,
 } from 'database-devtools/client';
 import { useToast } from './ToastContext';
 
@@ -187,15 +188,13 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setQueryError(null);
     activeRefreshDeviceIdRef.current = null;
 
-    const toast = buildSnapshotLoadedToast(
-      pushedFromDevice ? 'mobile' : 'browser',
-      message.deviceId,
-      message.databaseName ?? message.kind,
-      deviceStatusRef.current,
-    );
+    const databaseName = message.databaseName ?? message.kind;
+    const deviceLabel = resolveDeviceLabel(message.deviceId, deviceStatusRef.current);
+    const initiator = pushedFromDevice ? 'mobile' : 'browser';
 
     showToast({
-      ...toast,
+      title: initiator === 'mobile' ? 'New database received' : 'Database refreshed',
+      message: formatSnapshotReceivedMessage(deviceLabel, databaseName),
       variant: 'success',
     });
   }, [openSnapshot, showToast]);

@@ -7,7 +7,7 @@ import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 type SqlEditorProps = {
   value: string;
   onChange: (value: string) => void;
-  onRun: () => void;
+  onRun: (sqlOverride?: string) => void;
   disabled?: boolean;
 };
 
@@ -19,13 +19,14 @@ const editorTheme = EditorView.theme({
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     backgroundColor: 'var(--bg-surface)',
     color: 'var(--text-primary)',
+    height: '100%',
   },
   '.cm-scroller': {
     overflow: 'auto',
-    maxHeight: '240px',
+    height: '100%',
   },
   '.cm-content': {
-    minHeight: '180px',
+    minHeight: '100%',
     caretColor: 'var(--accent)',
   },
   '.cm-gutters': {
@@ -41,6 +42,20 @@ const editorTheme = EditorView.theme({
     backgroundColor: 'var(--bg-hover)',
   },
 });
+
+function getSqlToRun(view: EditorView): string {
+  const { from, to } = view.state.selection.main;
+
+  if (from !== to) {
+    const selected = view.state.sliceDoc(from, to).trim();
+
+    if (selected) {
+      return selected;
+    }
+  }
+
+  return view.state.doc.toString();
+}
 
 export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,10 +86,14 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
             ...defaultKeymap,
             {
               key: 'Mod-Enter',
-              run: () => {
-                onRunRef.current();
+              run: (editorView) => {
+                onRunRef.current(getSqlToRun(editorView));
                 return true;
               },
+            },
+            {
+              key: 'Mod-Shift-f',
+              run: () => false,
             },
           ]),
           EditorView.updateListener.of((update) => {
@@ -124,5 +143,5 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
     }
   }, [value]);
 
-  return <div className="sql-editor-cm" ref={containerRef} />;
+  return <div className="sql-editor-cm sql-editor-cm--fill" ref={containerRef} />;
 }

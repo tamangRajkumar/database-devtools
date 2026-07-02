@@ -18,6 +18,7 @@
     "database-devtools": "workspace:*",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "sql-formatter": "^15.8.2",
     "sql.js": "^1.13.0"
   },
   "devDependencies": {

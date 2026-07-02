@@ -327,6 +327,9 @@
 }
 
 .query-run-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   padding: 0.5rem 1rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;

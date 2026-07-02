@@ -4,10 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { QueryResult } from 'database-devtools';
+import { formatSql } from '../lib/formatSql';
 import {
   copyTextToClipboard,
   downloadBlob,
@@ -25,18 +27,34 @@ import {
   loadFavorites,
   loadHistory,
 } from '../lib/queryStorage';
-import { DEFAULT_SQL, type FavoriteQuery, type QueryHistoryEntry, type QuerySidebarTab } from '../types/sqlWorkspace';
+import {
+  createQueryTab,
+  loadQueryTabs,
+  saveQueryTabs,
+  type StoredQueryTab,
+} from '../lib/queryTabsStorage';
+import type { ExecutionMeta, QueryTab } from '../types/workspace';
+import { type FavoriteQuery, type QueryHistoryEntry } from '../types/sqlWorkspace';
 import { useDevTools } from './DevToolsContext';
+import { useWorkspace } from './WorkspaceContext';
 
 type SqlWorkspaceContextValue = {
+  tabs: QueryTab[];
+  activeTabId: string;
+  activeTab: QueryTab;
   sql: string;
   setSql: (sql: string) => void;
+  createTab: () => void;
+  closeTab: (id: string) => void;
+  switchTab: (id: string) => void;
   result: QueryResult | null;
   error: string | null;
   running: boolean;
-  runQuery: () => void;
-  sidebarTab: QuerySidebarTab;
-  setSidebarTab: (tab: QuerySidebarTab) => void;
+  executionMeta: ExecutionMeta | null;
+  lastMessage: string | null;
+  runQuery: (sqlOverride?: string) => void;
+  formatActiveSql: () => void;
+  clearActiveSql: () => void;
   history: QueryHistoryEntry[];
   favorites: FavoriteQuery[];
   loadFromHistory: (id: string) => void;
@@ -51,63 +69,225 @@ type SqlWorkspaceContextValue = {
   openSaveDialog: () => void;
   closeSaveDialog: () => void;
   copyStatus: string | null;
+  insertSql: (sql: string) => void;
 };
 
 const SqlWorkspaceContext = createContext<SqlWorkspaceContextValue | null>(null);
 
+function toQueryTab(stored: StoredQueryTab, dirty = false): QueryTab {
+  return { ...stored, dirty };
+}
+
+function markDirty(tab: QueryTab, sql: string, originalSql: string): QueryTab {
+  return { ...tab, sql, dirty: sql !== originalSql };
+}
+
 export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
   const { selectedDeviceId, hasDatabase, executeQuery, clearQueryError } = useDevTools();
+  const { setBottomPanelTab } = useWorkspace();
 
-  const [sql, setSql] = useState(DEFAULT_SQL);
+  const initialTabsRef = useRef(loadQueryTabs(selectedDeviceId));
+  const [tabs, setTabs] = useState<QueryTab[]>(() =>
+    initialTabsRef.current.tabs.map((tab) => toQueryTab(tab)),
+  );
+  const [activeTabId, setActiveTabId] = useState(initialTabsRef.current.activeTabId);
+  const [originalSqlByTab, setOriginalSqlByTab] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    initialTabsRef.current.tabs.forEach((tab) => {
+      map[tab.id] = tab.sql;
+    });
+    return map;
+  });
+
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<QuerySidebarTab>('history');
+  const [executionMeta, setExecutionMeta] = useState<ExecutionMeta | null>(null);
+  const [lastMessage, setLastMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
   const [favorites, setFavorites] = useState<FavoriteQuery[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+
+  const activeTab = useMemo(
+    () => tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]!,
+    [tabs, activeTabId],
+  );
+
+  const sql = activeTab?.sql ?? '';
+
+  useEffect(() => {
+    const loaded = loadQueryTabs(selectedDeviceId);
+    setTabs(loaded.tabs.map((tab) => toQueryTab(tab)));
+    setActiveTabId(loaded.activeTabId);
+    const map: Record<string, string> = {};
+    loaded.tabs.forEach((tab) => {
+      map[tab.id] = tab.sql;
+    });
+    setOriginalSqlByTab(map);
+    setResult(null);
+    setError(null);
+    setExecutionMeta(null);
+    setLastMessage(null);
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
+    if (tabs.length === 0) {
+      return;
+    }
+
+    saveQueryTabs(
+      selectedDeviceId,
+      tabs.map(({ id, title, sql: tabSql }) => ({ id, title, sql: tabSql })),
+      activeTabId,
+    );
+  }, [tabs, activeTabId, selectedDeviceId]);
 
   useEffect(() => {
     setHistory(loadHistory(selectedDeviceId));
     setFavorites(loadFavorites(selectedDeviceId));
   }, [selectedDeviceId]);
 
-  const runQuery = useCallback(() => {
-    if (!hasDatabase || running) {
-      return;
-    }
+  const updateActiveTabSql = useCallback(
+    (nextSql: string) => {
+      setTabs((current) =>
+        current.map((tab) =>
+          tab.id === activeTabId
+            ? markDirty(tab, nextSql, originalSqlByTab[tab.id] ?? tab.sql)
+            : tab,
+        ),
+      );
+    },
+    [activeTabId, originalSqlByTab],
+  );
 
-    setRunning(true);
-    setError(null);
-    clearQueryError();
+  const setSql = updateActiveTabSql;
 
-    try {
-      const queryResult = executeQuery(sql);
-      setResult(queryResult);
-      const entry = createHistoryEntry(sql, queryResult);
-      setHistory(appendHistory(selectedDeviceId, entry));
-    } catch (runError) {
-      const message = runError instanceof Error ? runError.message : 'Query failed';
-      setError(message);
+  const createTab = useCallback(() => {
+    const nextIndex = tabs.length + 1;
+    const stored = createQueryTab(nextIndex);
+    const tab = toQueryTab(stored);
+    setTabs((current) => [...current, tab]);
+    setOriginalSqlByTab((current) => ({ ...current, [tab.id]: tab.sql }));
+    setActiveTabId(tab.id);
+  }, [tabs.length]);
+
+  const closeTab = useCallback(
+    (id: string) => {
+      if (tabs.length === 1) {
+        return;
+      }
+
+      setTabs((current) => {
+        const next = current.filter((tab) => tab.id !== id);
+
+        if (activeTabId === id) {
+          setActiveTabId(next[0]!.id);
+        }
+
+        return next;
+      });
+
+      setOriginalSqlByTab((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    },
+    [tabs.length, activeTabId],
+  );
+
+  const switchTab = useCallback((id: string) => {
+    setActiveTabId(id);
+  }, []);
+
+  const runQuery = useCallback(
+    (sqlOverride?: string) => {
+      if (!hasDatabase || running) {
+        return;
+      }
+
+      const queryText = (sqlOverride ?? sql).trim();
+
+      if (!queryText) {
+        setLastMessage('Nothing to run — enter a SQL statement first.');
+        setBottomPanelTab('messages');
+        return;
+      }
+
+      setRunning(true);
+      setError(null);
+      setLastMessage(null);
+      clearQueryError();
+
+      try {
+        const queryResult = executeQuery(queryText);
+        setResult(queryResult);
+        setExecutionMeta({
+          durationMs: queryResult.durationMs,
+          rowCount: queryResult.rowCount,
+          ranAt: Date.now(),
+        });
+        setLastMessage(
+          `Query executed successfully. ${queryResult.rowCount} row${queryResult.rowCount === 1 ? '' : 's'} returned in ${queryResult.durationMs.toFixed(1)} ms.`,
+        );
+        const entry = createHistoryEntry(queryText, queryResult);
+        setHistory(appendHistory(selectedDeviceId, entry));
+        setBottomPanelTab('results');
+      } catch (runError) {
+        const message = runError instanceof Error ? runError.message : 'Query failed';
+        setError(message);
+        setResult(null);
+        setExecutionMeta(null);
+        setLastMessage(message);
+        const entry = createHistoryEntry(queryText, undefined, message);
+        setHistory(appendHistory(selectedDeviceId, entry));
+        setBottomPanelTab('messages');
+      } finally {
+        setRunning(false);
+      }
+    },
+    [
+      hasDatabase,
+      running,
+      sql,
+      executeQuery,
+      clearQueryError,
+      selectedDeviceId,
+      setBottomPanelTab,
+    ],
+  );
+
+  const formatActiveSql = useCallback(() => {
+    const formatted = formatSql(sql);
+    updateActiveTabSql(formatted);
+  }, [sql, updateActiveTabSql]);
+
+  const clearActiveSql = useCallback(() => {
+    updateActiveTabSql('');
+  }, [updateActiveTabSql]);
+
+  const insertSql = useCallback(
+    (nextSql: string) => {
+      updateActiveTabSql(nextSql);
       setResult(null);
-      const entry = createHistoryEntry(sql, undefined, message);
-      setHistory(appendHistory(selectedDeviceId, entry));
-    } finally {
-      setRunning(false);
-    }
-  }, [hasDatabase, running, sql, executeQuery, clearQueryError, selectedDeviceId]);
+      setError(null);
+      setExecutionMeta(null);
+      setLastMessage(null);
+    },
+    [updateActiveTabSql],
+  );
 
   const loadFromHistory = useCallback(
     (id: string) => {
       const entry = history.find((item) => item.id === id);
 
       if (entry) {
-        setSql(entry.sql);
-        setError(null);
+        insertSql(entry.sql);
+        setBottomPanelTab('results');
       }
     },
-    [history],
+    [history, insertSql, setBottomPanelTab],
   );
 
   const loadFavorite = useCallback(
@@ -115,11 +295,10 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       const favorite = favorites.find((item) => item.id === id);
 
       if (favorite) {
-        setSql(favorite.sql);
-        setError(null);
+        insertSql(favorite.sql);
       }
     },
-    [favorites],
+    [favorites, insertSql],
   );
 
   const saveFavorite = useCallback(
@@ -132,9 +311,9 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
 
       setFavorites(addFavorite(selectedDeviceId, createFavorite(trimmed, sql)));
       setSaveDialogOpen(false);
-      setSidebarTab('favorites');
+      setBottomPanelTab('history');
     },
-    [sql, selectedDeviceId],
+    [sql, selectedDeviceId, setBottomPanelTab],
   );
 
   const deleteFavorite = useCallback(
@@ -177,14 +356,22 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
+      tabs,
+      activeTabId,
+      activeTab,
       sql,
       setSql,
+      createTab,
+      closeTab,
+      switchTab,
       result,
       error,
       running,
+      executionMeta,
+      lastMessage,
       runQuery,
-      sidebarTab,
-      setSidebarTab,
+      formatActiveSql,
+      clearActiveSql,
       history,
       favorites,
       loadFromHistory,
@@ -199,14 +386,24 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       openSaveDialog: () => setSaveDialogOpen(true),
       closeSaveDialog: () => setSaveDialogOpen(false),
       copyStatus,
+      insertSql,
     }),
     [
+      tabs,
+      activeTabId,
+      activeTab,
       sql,
+      createTab,
+      closeTab,
+      switchTab,
       result,
       error,
       running,
+      executionMeta,
+      lastMessage,
       runQuery,
-      sidebarTab,
+      formatActiveSql,
+      clearActiveSql,
       history,
       favorites,
       loadFromHistory,
@@ -219,6 +416,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       exportJson,
       saveDialogOpen,
       copyStatus,
+      insertSql,
     ],
   );
 

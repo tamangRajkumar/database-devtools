@@ -3,7 +3,11 @@ import { useEditMode } from '../../context/EditModeContext';
 import { useExplorer } from '../../context/ExplorerContext';
 import { InsertRowDialog } from './InsertRowDialog';
 
-export function ExplorerToolbar() {
+type ExplorerToolbarProps = {
+  embedded?: boolean;
+};
+
+export function ExplorerToolbar({ embedded = false }: ExplorerToolbarProps) {
   const {
     selectedTable,
     view,
@@ -30,28 +34,30 @@ export function ExplorerToolbar() {
         )}
       </div>
 
-      <div className="explorer-toolbar__center">
-        <div className="explorer-tabs" role="tablist" aria-label="Table views">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'data'}
-            className={`explorer-tabs__item ${view === 'data' ? 'explorer-tabs__item--active' : ''}`}
-            onClick={() => setView('data')}
-          >
-            Data
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'schema'}
-            className={`explorer-tabs__item ${view === 'schema' ? 'explorer-tabs__item--active' : ''}`}
-            onClick={() => setView('schema')}
-          >
-            Schema
-          </button>
+      {!embedded && (
+        <div className="explorer-toolbar__center">
+          <div className="explorer-tabs" role="tablist" aria-label="Table views">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'data'}
+              className={`explorer-tabs__item ${view === 'data' ? 'explorer-tabs__item--active' : ''}`}
+              onClick={() => setView('data')}
+            >
+              Data
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'schema'}
+              className={`explorer-tabs__item ${view === 'schema' ? 'explorer-tabs__item--active' : ''}`}
+              onClick={() => setView('schema')}
+            >
+              Schema
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="explorer-toolbar__right">
         {view === 'data' && editMode && transactionOpen && (

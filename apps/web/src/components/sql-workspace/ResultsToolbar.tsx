@@ -6,7 +6,6 @@ export function ResultsToolbar() {
 
   return (
     <div className="results-toolbar">
-      <h3 className="panel__section-title">Results</h3>
       <div className="results-toolbar__actions">
         <button type="button" className="sql-toolbar__secondary" disabled={disabled} onClick={() => void copyResults()}>
           Copy
