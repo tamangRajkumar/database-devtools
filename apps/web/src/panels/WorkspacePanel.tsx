@@ -3,7 +3,7 @@ import { useDevTools } from '../context/DevToolsContext';
 import { useSqlWorkspace } from '../context/SqlWorkspaceContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SaveFavoriteDialog } from '../components/sql-workspace/SaveFavoriteDialog';
-import { SqlEditor } from '../components/sql-workspace/SqlEditor';
+import { SqlEditor, type SqlEditorHandle } from '../components/sql-workspace/SqlEditor';
 import { SqlToolbar } from '../components/sql-workspace/SqlToolbar';
 import { BottomPanel } from '../components/workspace/BottomPanel';
 import { ObjectExplorer } from '../components/workspace/ObjectExplorer';
@@ -24,6 +24,7 @@ export function WorkspacePanel() {
     setShortcutsOpen,
   } = useWorkspace();
   const splitContainerRef = useRef<HTMLDivElement>(null);
+  const sqlEditorRef = useRef<SqlEditorHandle>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -100,8 +101,9 @@ export function WorkspacePanel() {
               className="workspace__editor-pane"
               style={{ flexGrow: editorSplitRatio, flexShrink: 1, flexBasis: 0, minHeight: 120 }}
             >
-              <SqlToolbar />
+              <SqlToolbar editorRef={sqlEditorRef} />
               <SqlEditor
+                ref={sqlEditorRef}
                 value={sql}
                 onChange={setSql}
                 onRun={runQuery}

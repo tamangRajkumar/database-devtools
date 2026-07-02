@@ -1,10 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { defaultKeymap } from '@codemirror/commands';
 import { sql } from '@codemirror/lang-sql';
 import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { useDevTools } from '../../context/DevToolsContext';
+import { getSqlToRun } from '../../lib/getSqlToRun';
 import { buildSqlSchemaCompletion } from '../../lib/sqlSchemaCompletion';
+
+export type SqlEditorHandle = {
+  getSqlToRun: () => string;
+};
 
 type SqlEditorProps = {
   value: string;
@@ -46,26 +51,33 @@ const editorTheme = EditorView.theme({
   },
 });
 
-function getSqlToRun(view: EditorView): string {
+function getSqlToRunFromView(view: EditorView): string {
   const { from, to } = view.state.selection.main;
 
-  if (from !== to) {
-    const selected = view.state.sliceDoc(from, to).trim();
-
-    if (selected) {
-      return selected;
-    }
-  }
-
-  return view.state.doc.toString();
+  return getSqlToRun(view.state.doc.toString(), { from, to });
 }
 
-export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEditorProps) {
+export const SqlEditor = forwardRef<SqlEditorHandle, SqlEditorProps>(function SqlEditor(
+  { value, onChange, onRun, disabled = false },
+  ref,
+) {
   const { schema } = useDevTools();
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const onRunRef = useRef(onRun);
+
+  useImperativeHandle(ref, () => ({
+    getSqlToRun: () => {
+      const view = viewRef.current;
+
+      if (!view) {
+        return value;
+      }
+
+      return getSqlToRunFromView(view);
+    },
+  }));
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -91,7 +103,7 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
             {
               key: 'Mod-Enter',
               run: (editorView) => {
-                onRunRef.current(getSqlToRun(editorView));
+                onRunRef.current(getSqlToRunFromView(editorView));
                 return true;
               },
             },
@@ -158,4 +170,4 @@ export function SqlEditor({ value, onChange, onRun, disabled = false }: SqlEdito
       aria-label="SQL editor"
     />
   );
-}
+});

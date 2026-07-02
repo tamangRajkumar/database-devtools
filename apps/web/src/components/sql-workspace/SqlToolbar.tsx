@@ -1,12 +1,23 @@
+import type { RefObject } from 'react';
 import { useDevTools } from '../../context/DevToolsContext';
 import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { PlayIcon, HelpIcon } from '../icons/NavIcons';
+import type { SqlEditorHandle } from './SqlEditor';
 
-export function SqlToolbar() {
+type SqlToolbarProps = {
+  editorRef: RefObject<SqlEditorHandle | null>;
+};
+
+export function SqlToolbar({ editorRef }: SqlToolbarProps) {
   const { hasDatabase } = useDevTools();
   const { running, runQuery, openSaveDialog, formatActiveSql, clearActiveSql } = useSqlWorkspace();
   const { setShortcutsOpen } = useWorkspace();
+
+  const handleRun = () => {
+    const sqlToRun = editorRef.current?.getSqlToRun();
+    runQuery(sqlToRun);
+  };
 
   return (
     <div className="sql-toolbar">
@@ -15,8 +26,8 @@ export function SqlToolbar() {
           type="button"
           className="query-run-button"
           disabled={!hasDatabase || running}
-          onClick={() => runQuery()}
-          title={!hasDatabase ? 'Refresh to load database snapshot' : 'Run query (Ctrl+Enter)'}
+          onClick={handleRun}
+          title={!hasDatabase ? 'Refresh to load database snapshot' : 'Run query or selection (Ctrl+Enter)'}
         >
           <PlayIcon />
           {running ? 'Running…' : 'Run'}
@@ -46,7 +57,7 @@ export function SqlToolbar() {
         >
           Save favorite
         </button>
-        <span className="sql-toolbar__hint">Ctrl+Enter to run</span>
+        <span className="sql-toolbar__hint">Ctrl+Enter to run selection or all</span>
       </div>
       <div className="sql-toolbar__right">
         <button
