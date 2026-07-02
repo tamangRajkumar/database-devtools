@@ -10,8 +10,8 @@ import {
 import type { ColumnInfo, TablePageResult } from '../../types/inspection';
 import type { MobileDatabaseInspector } from '../../mobile/types';
 import { DEFAULT_PAGE_SIZE } from '../../mobile/constants';
-import { MobileDataTable } from './MobileDataTable';
-import { explorerStyles } from './mobileExplorerStyles';
+import { MobileDataView } from './MobileDataView';
+import { explorerStyles, tableStyles } from './mobileExplorerStyles';
 
 type ExplorerTableDetailProps = {
   inspector: MobileDatabaseInspector;
@@ -93,7 +93,7 @@ export function ExplorerTableDetail({ inspector, tableName, onBack }: ExplorerTa
       </View>
 
       {view === 'data' ? (
-        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+        <View style={tableStyles.detailBody}>
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
@@ -112,7 +112,13 @@ export function ExplorerTableDetail({ inspector, tableName, onBack }: ExplorerTa
             <Text style={explorerStyles.errorText}>{error}</Text>
           ) : pageResult ? (
             <>
-              <MobileDataTable columns={pageResult.columns} rows={pageResult.rows} />
+              <View style={tableStyles.detailDataPane}>
+                <MobileDataView
+                  columns={pageResult.columns}
+                  metaSuffix={`page ${page} of ${totalPages}`}
+                  rows={pageResult.rows}
+                />
+              </View>
               <View style={explorerStyles.paginationRow}>
                 <Pressable disabled={page <= 1} onPress={() => setPage((current) => current - 1)}>
                   <Text style={explorerStyles.headerAction}>Previous</Text>

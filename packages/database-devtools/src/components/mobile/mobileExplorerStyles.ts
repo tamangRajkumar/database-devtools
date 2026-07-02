@@ -238,3 +238,163 @@ export const explorerStyles = StyleSheet.create({
     color: explorerColors.muted,
   },
 });
+
+export const tableStyles = StyleSheet.create({
+  viewRoot: {
+    flex: 1,
+    minHeight: 0,
+  },
+  viewToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  viewMeta: {
+    flex: 1,
+    fontSize: 12,
+    color: explorerColors.muted,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: explorerColors.border,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  viewToggleButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: explorerColors.background,
+  },
+  viewToggleButtonActive: {
+    backgroundColor: explorerColors.accentSoft,
+  },
+  viewToggleLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: explorerColors.muted,
+  },
+  viewToggleLabelActive: {
+    color: explorerColors.accent,
+  },
+  footerHint: {
+    marginTop: 8,
+    fontSize: 11,
+    color: explorerColors.subtle,
+    textAlign: 'center',
+  },
+  tableContainer: {
+    flex: 1,
+    minHeight: 0,
+    borderWidth: 1,
+    borderColor: explorerColors.border,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: explorerColors.background,
+  },
+  horizontalScroll: {
+    flex: 1,
+  },
+  scrollHint: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 11,
+    color: explorerColors.muted,
+    backgroundColor: explorerColors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: explorerColors.border,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderBottomWidth: 1,
+    borderBottomColor: explorerColors.border,
+  },
+  headerCell: {
+    backgroundColor: '#f1f5f9',
+  },
+  headerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: explorerColors.text,
+    fontFamily: 'monospace',
+  },
+  bodyList: {
+    flex: 1,
+  },
+  dataRow: {
+    flexDirection: 'row',
+    backgroundColor: explorerColors.background,
+  },
+  dataRowAlt: {
+    backgroundColor: explorerColors.surface,
+  },
+  cell: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: explorerColors.border,
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 13,
+    color: explorerColors.text,
+  },
+  cellTextMono: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+  },
+  cellNull: {
+    color: explorerColors.subtle,
+    fontStyle: 'italic',
+  },
+  copiedHint: {
+    marginTop: 2,
+    fontSize: 10,
+    color: explorerColors.accent,
+    fontWeight: '600',
+  },
+  cardList: {
+    paddingBottom: 8,
+    gap: 8,
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: explorerColors.border,
+    borderRadius: 8,
+    backgroundColor: explorerColors.surface,
+    padding: 12,
+    gap: 10,
+  },
+  cardField: {
+    gap: 2,
+  },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: explorerColors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  cardValue: {
+    fontSize: 14,
+    color: explorerColors.text,
+  },
+  cardValueMono: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+  },
+  detailBody: {
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: 16,
+  },
+  detailDataPane: {
+    flex: 1,
+    minHeight: 0,
+  },
+});

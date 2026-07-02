@@ -10,7 +10,7 @@ import {
 import type { QueryResult } from '../../types/inspection';
 import type { MobileDatabaseInspector } from '../../mobile/types';
 import { DEFAULT_MOBILE_SQL } from '../../mobile/constants';
-import { MobileDataTable } from './MobileDataTable';
+import { MobileDataView } from './MobileDataView';
 import { explorerStyles } from './mobileExplorerStyles';
 
 type ExplorerSqlTabProps = {
@@ -70,7 +70,7 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
         </Text>
       </ScrollView>
 
-      <View style={explorerStyles.tabRow}>
+      <View style={[explorerStyles.tabRow, { flexShrink: 0 }]}>
         <Pressable
           onPress={() => setPanel('results')}
           style={[explorerStyles.tab, panel === 'results' && explorerStyles.tabActive]}
@@ -93,17 +93,15 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
         </Pressable>
       </View>
 
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <View style={{ flex: 1, minHeight: 0, paddingHorizontal: 16, paddingBottom: 16 }}>
         {panel === 'results' ? (
           result ? (
             result.columns.length > 0 ? (
-              <>
-                <Text style={explorerStyles.hintText}>
-                  {result.rowCount} row{result.rowCount === 1 ? '' : 's'} in{' '}
-                  {result.durationMs.toFixed(1)} ms
-                </Text>
-                <MobileDataTable columns={result.columns} rows={result.rows} />
-              </>
+              <MobileDataView
+                columns={result.columns}
+                metaSuffix={`${result.durationMs.toFixed(1)} ms`}
+                rows={result.rows}
+              />
             ) : (
               <Text style={explorerStyles.placeholder}>
                 Query completed with no result set ({result.durationMs.toFixed(1)} ms).
@@ -122,7 +120,7 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
         ) : (
           <Text style={explorerStyles.placeholder}>Messages and errors appear here.</Text>
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }
