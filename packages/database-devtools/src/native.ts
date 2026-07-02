@@ -116,7 +116,14 @@ export { DatabaseDevTools } from './components/DatabaseDevTools';
 export {
   createExpoSqliteAdapter,
   detectExpoSqlite,
+  detectExpoSqliteInspectable,
   registerSqliteAdapter,
   sqliteAdapterDefinition,
 } from './adapters/sqlite';
-export type { CreateExpoSqliteAdapterOptions, ExpoSqliteDatabase } from './adapters/sqlite';
+export type {
+  CreateExpoSqliteAdapterOptions,
+  ExpoSqliteDatabase,
+  ExpoSqliteInspectableDatabase,
+} from './adapters/sqlite';
+export { createExpoSqliteInspector } from './mobile/createExpoSqliteInspector';
+export type { MobileDatabaseInfo, MobileDatabaseInspector } from './mobile/types';

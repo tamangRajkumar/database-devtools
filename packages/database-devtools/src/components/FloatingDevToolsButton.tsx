@@ -42,7 +42,7 @@ export function FloatingDevToolsButton({
   floatingPosition,
   onFloatingPositionChange,
 }: FloatingDevToolsButtonProps) {
-  const { connectionState, openSettings } = useDevTools();
+  const { connectionState, openLauncher } = useDevTools();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [internalPosition, setInternalPosition] = useState<FloatingButtonPosition | null>(null);
   const [dragPosition, setDragPosition] = useState<FloatingButtonPosition | null>(null);
@@ -139,7 +139,7 @@ export function FloatingDevToolsButton({
           const movement = Math.hypot(gesture.dx, gesture.dy);
 
           if (isFloatingButtonTap(movement)) {
-            openSettings();
+            openLauncher();
             return;
           }
 
@@ -157,7 +157,7 @@ export function FloatingDevToolsButton({
           setDragPosition(null);
         },
       }),
-    [commitPosition, committedPosition, draggable, layout, openSettings, snapToEdges],
+    [commitPosition, committedPosition, draggable, layout, openLauncher, snapToEdges],
   );
 
   if (!renderedPosition) {
@@ -186,7 +186,7 @@ export function FloatingDevToolsButton({
         <Pressable
           accessibilityLabel="Open Database DevTools"
           accessibilityRole="button"
-          onPress={openSettings}
+          onPress={openLauncher}
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
           {buttonContent}
@@ -210,7 +210,7 @@ export function FloatingDevToolsButton({
       {...panResponder.panHandlers}
     >
       <View
-        accessibilityHint="Drag to move. Tap to open settings."
+        accessibilityHint="Drag to move. Tap to open DevTools launcher."
         accessibilityLabel="Open Database DevTools"
         accessibilityRole="button"
         style={[styles.button, dragPosition && styles.buttonDragging]}

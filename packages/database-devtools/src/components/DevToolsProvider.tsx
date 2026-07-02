@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { resolveAdapter } from '../adapter/resolveAdapter';
+import { detectExpoSqliteInspectable } from '../adapters/sqlite/detect';
 import { isWritableDatabaseAdapter } from '../types/adapter';
 import {
   createDevToolsClient,
@@ -20,6 +21,8 @@ import { DevToolsRole, REFRESH_TIMEOUT_MS } from '../types/protocol';
 import { getConnectionHint } from '../utils/resolveDevToolsHost';
 import { resolveDeviceMetadata } from '../utils/resolveDeviceMetadata';
 import { normalizeServerUrl, resolveServerUrl } from '../utils/resolveServerUrl';
+import { createExpoSqliteInspector } from '../mobile/createExpoSqliteInspector';
+import type { MobileDatabaseInspector } from '../mobile/types';
 
 export type DevToolsProviderProps = {
   children: ReactNode;
@@ -48,6 +51,9 @@ export function DevToolsProvider({
   const [serverUrl, setServerUrl] = useState(() => resolveServerUrl(initialServerUrl));
   const [deviceId, setDeviceId] = useState<string | undefined>();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [launcherVisible, setLauncherVisible] = useState(false);
+  const [explorerVisible, setExplorerVisible] = useState(false);
+  const [mobileInspector, setMobileInspector] = useState<MobileDatabaseInspector | null>(null);
   const [resolvedAdapter, setResolvedAdapter] = useState<DatabaseAdapter | undefined>(explicitAdapter);
   const [adapterError, setAdapterError] = useState<string | null>(null);
   const [exportState, setExportState] = useState<ExportState>('idle');
@@ -138,6 +144,15 @@ export function DevToolsProvider({
       cancelled = true;
     };
   }, [database, type, explicitAdapter]);
+
+  useEffect(() => {
+    if (detectExpoSqliteInspectable(database)) {
+      setMobileInspector(createExpoSqliteInspector(database));
+      return;
+    }
+
+    setMobileInspector(null);
+  }, [database]);
 
   useEffect(() => {
     databaseRef.current = resolvedAdapter;
@@ -269,7 +284,25 @@ export function DevToolsProvider({
     };
   }, [serverUrl, metadata, clearExportWaiters]);
 
+  const openLauncher = useCallback(() => {
+    setLauncherVisible(true);
+  }, []);
+
+  const closeLauncher = useCallback(() => {
+    setLauncherVisible(false);
+  }, []);
+
+  const openExplorer = useCallback(() => {
+    setLauncherVisible(false);
+    setExplorerVisible(true);
+  }, []);
+
+  const closeExplorer = useCallback(() => {
+    setExplorerVisible(false);
+  }, []);
+
   const openSettings = useCallback(() => {
+    setLauncherVisible(false);
     setSettingsVisible(true);
   }, []);
 
@@ -343,6 +376,13 @@ export function DevToolsProvider({
       metadata,
       database: resolvedAdapter,
       adapterError,
+      mobileInspector,
+      launcherVisible,
+      openLauncher,
+      closeLauncher,
+      explorerVisible,
+      openExplorer,
+      closeExplorer,
       settingsVisible,
       openSettings,
       closeSettings,
@@ -360,6 +400,13 @@ export function DevToolsProvider({
       metadata,
       resolvedAdapter,
       adapterError,
+      mobileInspector,
+      launcherVisible,
+      openLauncher,
+      closeLauncher,
+      explorerVisible,
+      openExplorer,
+      closeExplorer,
       settingsVisible,
       openSettings,
       closeSettings,

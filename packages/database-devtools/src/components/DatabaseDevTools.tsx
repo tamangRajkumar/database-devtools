@@ -5,8 +5,10 @@ import type { DatabaseKind } from '../types/kind';
 import type { FloatingButtonPosition } from '../utils/floatingButtonPosition';
 import { isDevToolsEnabled } from '../utils/isDevToolsEnabled';
 import { DevToolsProvider } from './DevToolsProvider';
+import { DevToolsLauncherModal } from './DevToolsLauncherModal';
 import { DevToolsSettingsModal } from './DevToolsSettingsModal';
 import { FloatingDevToolsButton } from './FloatingDevToolsButton';
+import { MobileDatabaseExplorer } from './mobile/MobileDatabaseExplorer';
 
 export type { ConnectionState };
 export type { FloatingButtonPosition };
@@ -69,7 +71,9 @@ export function DatabaseDevTools({
           position={position}
           snapToEdges={snapToEdges}
         />
+        <DevToolsLauncherModal />
         <DevToolsSettingsModal />
+        <MobileDatabaseExplorer />
       </View>
     </DevToolsProvider>
   );

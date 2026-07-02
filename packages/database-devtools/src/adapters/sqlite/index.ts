@@ -1,8 +1,8 @@
 export { createExpoSqliteAdapter } from './createExpoSqliteAdapter';
 export type { CreateExpoSqliteAdapterOptions } from './createExpoSqliteAdapter';
-export { detectExpoSqlite } from './detect';
+export { detectExpoSqlite, detectExpoSqliteInspectable } from './detect';
 export { registerSqliteAdapter, sqliteAdapterDefinition } from './register';
-export type { ExpoSqliteDatabase } from './types';
+export type { ExpoSqliteDatabase, ExpoSqliteInspectableDatabase } from './types';
 export {
   buildDeleteSql,
   buildInsertSql,

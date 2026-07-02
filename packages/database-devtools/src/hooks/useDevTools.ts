@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { ConnectionState } from '../client/createDevToolsClient';
 import type { DatabaseAdapter } from '../types/adapter';
 import type { DeviceMetadata } from '../types/protocol';
+import type { MobileDatabaseInspector } from '../mobile/types';
 
 export type ExportState = 'idle' | 'exporting' | 'success' | 'error';
 
@@ -14,6 +15,13 @@ export type DevToolsContextValue = {
   metadata: DeviceMetadata;
   database: DatabaseAdapter | undefined;
   adapterError: string | null;
+  mobileInspector: MobileDatabaseInspector | null;
+  launcherVisible: boolean;
+  openLauncher: () => void;
+  closeLauncher: () => void;
+  explorerVisible: boolean;
+  openExplorer: () => void;
+  closeExplorer: () => void;
   settingsVisible: boolean;
   openSettings: () => void;
   closeSettings: () => void;

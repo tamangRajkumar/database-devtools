@@ -86,7 +86,9 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My App</Text>
-      <Text style={styles.subtitle}>Drag the DB button to move it. Tap to open DevTools.</Text>
+      <Text style={styles.subtitle}>
+        Drag the DB button. Tap to view the database or connect to web DevTools.
+      </Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
       {!database && !error && <ActivityIndicator size="large" />}
