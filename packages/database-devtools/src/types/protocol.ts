@@ -344,6 +344,12 @@ export const HEARTBEAT_TIMEOUT_MS = 10_000;
 
 export const DEVICE_SNAPSHOT_API_PATH = '/api/devices';
 
+export const PROJECT_DATABASE_API_PATH = '/api/project/database';
+
+export const PROJECT_DATABASE_META_API_PATH = '/api/project/database/meta';
+
+export const PROJECT_DATABASES_API_PATH = '/api/project/databases';
+
 /** @deprecated Use DEVICE_SNAPSHOT_API_PATH */
 export const SNAPSHOT_API_PATH = DEVICE_SNAPSHOT_API_PATH;
 

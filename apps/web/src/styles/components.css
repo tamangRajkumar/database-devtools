@@ -85,6 +85,20 @@
   cursor: not-allowed;
 }
 
+.refresh-button--secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.refresh-button--secondary:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.project-database-controls {
+  flex-shrink: 1;
+}
+
 .getting-started {
   margin: 0 0 1rem;
   padding: 1rem;

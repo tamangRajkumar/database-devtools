@@ -74,7 +74,7 @@ describe('RefreshCoordinator mobile export', () => {
     });
   });
 
-  it('broadcasts snapshotReady to browsers after mobile upload', () => {
+  it('broadcasts snapshotReady to browsers after mobile upload', async () => {
     const { connectionManager, router, sentToBrowsers } = createMocks();
     const pending = new PendingRefreshStore();
     const snapshots = new SnapshotStore();
@@ -100,7 +100,7 @@ describe('RefreshCoordinator mobile export', () => {
       refreshType: 'snapshot',
     });
 
-    const result = coordinator.handleSnapshotUpload('device-1', Buffer.from([1, 2, 3]), {
+    const result = await coordinator.handleSnapshotUpload('device-1', Buffer.from([1, 2, 3]), {
       kind: 'sqlite',
       mimeType: 'application/x-sqlite3',
       databaseName: 'booking.db',

@@ -38,6 +38,9 @@ export {
   DEFAULT_DEVTOOLS_PORT,
   DEVTOOLS_WS_PATH,
   DEVICE_SNAPSHOT_API_PATH,
+  PROJECT_DATABASE_API_PATH,
+  PROJECT_DATABASE_META_API_PATH,
+  PROJECT_DATABASES_API_PATH,
   DevToolsRole,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
@@ -122,6 +125,18 @@ export {
 export type { ConnectionState, DevToolsClient, DevToolsClientOptions, TransactionState } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
 export { fetchSnapshot } from './client/fetchSnapshot';
+export {
+  fetchProjectDatabase,
+  fetchProjectDatabaseMeta,
+  fetchProjectDatabases,
+} from './client/projectDatabase';
+export type { ListedProjectDatabase, ProjectDatabaseMeta } from './client/projectDatabase';
+export {
+  resolveProjectDatabaseMetaUrl,
+  resolveProjectDatabaseUrl,
+  resolveProjectDatabasesUrl,
+} from './client/resolveProjectDatabaseUrl';
+export type { ResolveProjectDatabaseUrlOptions } from './client/resolveProjectDatabaseUrl';
 export { handleDeviceSnapshotUpload } from './client/handleDeviceSnapshot';
 export {
   handleBeginTransaction,

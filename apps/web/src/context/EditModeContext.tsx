@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { WriteOperation } from 'database-devtools';
+import { SHOW_EDIT_MODE } from '../lib/featureFlags';
 import { useDevTools } from './DevToolsContext';
 
 const EDIT_MODE_STORAGE_KEY = 'database-devtools-edit-mode';
@@ -52,18 +53,17 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
     transactionState,
   } = useDevTools();
 
-  const [editMode, setEditModeState] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
-    return window.localStorage.getItem(EDIT_MODE_STORAGE_KEY) === 'true';
-  });
+  const [editMode, setEditModeState] = useState(false);
   const [pendingWrites, setPendingWrites] = useState(0);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const setEditMode = useCallback((enabled: boolean) => {
+    if (!SHOW_EDIT_MODE) {
+      setEditModeState(false);
+      return;
+    }
+
     setEditModeState(enabled);
     window.localStorage.setItem(EDIT_MODE_STORAGE_KEY, String(enabled));
   }, []);
@@ -75,7 +75,7 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
     transactionState === 'rolling_back';
 
   useEffect(() => {
-    if (!editMode || transactionOpen || transactionBusy) {
+    if (!SHOW_EDIT_MODE || !editMode || transactionOpen || transactionBusy) {
       return;
     }
 

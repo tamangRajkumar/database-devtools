@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { ColumnInfo, TablePageResult } from 'database-devtools';
 import { filterTables, sortTables } from '@database-devtools/inspector-sqlite';
+import { resolveExplorerTableSelection } from '../lib/resolveExplorerTableSelection';
 import { useDevTools } from './DevToolsContext';
 
 export type ExplorerView = 'data' | 'schema';
@@ -21,6 +23,7 @@ export type ExplorerRow = {
 type ExplorerContextValue = {
   selectedTable: string | null;
   setSelectedTable: (table: string | null) => void;
+  clearTableSelection: () => void;
   view: ExplorerView;
   setView: (view: ExplorerView) => void;
   tableSearch: string;
@@ -53,9 +56,9 @@ const ExplorerContext = createContext<ExplorerContextValue | null>(null);
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
 export function ExplorerProvider({ children }: { children: ReactNode }) {
-  const { hasDatabase, tables, schema, fetchTablePage } = useDevTools();
+  const { hasDatabase, tables, schema, fetchTablePage, selectedDeviceId } = useDevTools();
 
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedTable, setSelectedTableState] = useState<string | null>(null);
   const [view, setView] = useState<ExplorerView>('data');
   const [tableSearch, setTableSearch] = useState('');
   const [tableSort, setTableSort] = useState<'name' | 'rows'>('name');
@@ -71,8 +74,25 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   const [selectedRow, setSelectedRow] = useState<ExplorerRow | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
 
+  const userClearedSelectionRef = useRef(false);
+  const previousDeviceIdRef = useRef<string | null>(selectedDeviceId);
+
   const bumpDataVersion = useCallback(() => {
     setDataVersion((version) => version + 1);
+  }, []);
+
+  const setSelectedTable = useCallback((table: string | null) => {
+    if (table !== null) {
+      userClearedSelectionRef.current = false;
+    }
+
+    setSelectedTableState(table);
+  }, []);
+
+  const clearTableSelection = useCallback(() => {
+    userClearedSelectionRef.current = true;
+    setSelectedRow(null);
+    setSelectedTableState(null);
   }, []);
 
   const filteredTables = useMemo(
@@ -89,20 +109,33 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   }, [schema, selectedTable]);
 
   useEffect(() => {
+    if (selectedDeviceId === previousDeviceIdRef.current) {
+      return;
+    }
+
+    previousDeviceIdRef.current = selectedDeviceId;
+    userClearedSelectionRef.current = false;
+    setSelectedTableState(null);
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
     if (!hasDatabase) {
-      setSelectedTable(null);
+      userClearedSelectionRef.current = false;
+      setSelectedTableState(null);
       return;
     }
 
     if (tables.length === 0) {
-      setSelectedTable(null);
+      setSelectedTableState(null);
       return;
     }
 
-    if (!selectedTable || !tables.some((table) => table.name === selectedTable)) {
-      setSelectedTable(tables[0]?.name ?? null);
-    }
-  }, [hasDatabase, tables, selectedTable]);
+    const tableNames = tables.map((table) => table.name);
+
+    setSelectedTableState((current) =>
+      resolveExplorerTableSelection(current, tableNames, userClearedSelectionRef.current),
+    );
+  }, [hasDatabase, tables]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -180,6 +213,7 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     () => ({
       selectedTable,
       setSelectedTable,
+      clearTableSelection,
       view,
       setView,
       tableSearch,
@@ -208,6 +242,8 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     }),
     [
       selectedTable,
+      setSelectedTable,
+      clearTableSelection,
       view,
       tableSearch,
       tableSort,

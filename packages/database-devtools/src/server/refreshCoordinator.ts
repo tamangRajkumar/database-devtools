@@ -17,6 +17,7 @@ import { logger } from '../utils/logger';
 import type { ConnectionManager } from './connectionManager';
 import type { MessageRouter } from './messageRouter';
 import type { PendingRefreshStore } from './pendingRefreshStore';
+import type { SnapshotFileStore } from './snapshotFileStore';
 import type { SnapshotStore } from './snapshotStore';
 
 export class RefreshCoordinator {
@@ -25,6 +26,7 @@ export class RefreshCoordinator {
     private readonly router: MessageRouter,
     private readonly pending: PendingRefreshStore,
     private readonly snapshots: SnapshotStore,
+    private readonly snapshotFiles?: SnapshotFileStore,
   ) {}
 
   handleRefreshRequest(browserSocket: WebSocket, message: RefreshRequestMessage): void {
@@ -115,11 +117,11 @@ export class RefreshCoordinator {
     this.requestMobileUpload(mobile.deviceId, message.refreshType);
   }
 
-  handleSnapshotUpload(
+  async handleSnapshotUpload(
     deviceId: string,
     body: Buffer,
     metadata?: { kind?: string; mimeType?: string; databaseName?: string },
-  ): { ok: true; stored: SnapshotReadyMessage } | { ok: false; code: RefreshErrorCode } {
+  ): Promise<{ ok: true; stored: SnapshotReadyMessage } | { ok: false; code: RefreshErrorCode }> {
     const pending = this.pending.get(deviceId);
 
     if (!pending) {
@@ -134,6 +136,14 @@ export class RefreshCoordinator {
       kind: metadata?.kind ?? 'sqlite',
       mimeType: metadata?.mimeType ?? 'application/x-sqlite3',
       databaseName: metadata?.databaseName,
+    });
+
+    await this.snapshotFiles?.persistDeviceSnapshot({
+      deviceId,
+      bytes: body,
+      kind: stored.kind,
+      mimeType: stored.mimeType,
+      databaseName: stored.databaseName,
     });
 
     logger.refreshUploaded(deviceId, body.byteLength);
@@ -161,6 +171,18 @@ export class RefreshCoordinator {
   }
 
   getSnapshot(deviceId: string): Buffer | undefined {
+    return this.snapshots.getBytes(deviceId);
+  }
+
+  async getSnapshotAsync(deviceId: string): Promise<Buffer | undefined> {
+    if (this.snapshotFiles) {
+      const fromDisk = await this.snapshotFiles.readDeviceSnapshot(deviceId);
+
+      if (fromDisk) {
+        return fromDisk;
+      }
+    }
+
     return this.snapshots.getBytes(deviceId);
   }
 

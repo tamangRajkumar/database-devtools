@@ -1,6 +1,6 @@
 .devtools-shell {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
@@ -119,6 +119,19 @@
 
 .devtools-body--nav-collapsed {
   --sidebar-width: 4rem;
+}
+
+@media (min-width: 768px) {
+  .devtools-body--nav-hidden {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+
+  .devtools-body--nav-hidden .sidebar {
+    overflow: hidden;
+    border-right: none;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .sidebar {

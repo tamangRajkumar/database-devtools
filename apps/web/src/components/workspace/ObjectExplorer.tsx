@@ -133,6 +133,7 @@ export function ObjectExplorer() {
                         key={table.name}
                         className={`object-explorer__table ${selectedTable === table.name ? 'object-explorer__table--active' : ''}`}
                         role="treeitem"
+                        aria-selected={selectedTable === table.name}
                       >
                         <button
                           type="button"

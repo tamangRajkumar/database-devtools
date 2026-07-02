@@ -14,6 +14,7 @@ import {
   copyTextToClipboard,
   downloadBlob,
   formatResultsAsCsv,
+  formatResultsAsExcelXml,
   formatResultsAsJson,
   formatResultsAsTsv,
 } from '../lib/exportResults';
@@ -36,6 +37,7 @@ import {
 import type { ExecutionMeta, QueryTab } from '../types/workspace';
 import { type FavoriteQuery, type QueryHistoryEntry } from '../types/sqlWorkspace';
 import { useDevTools } from './DevToolsContext';
+import { useExplorer } from './ExplorerContext';
 import { useOnboarding } from './OnboardingContext';
 import { useToast } from './ToastContext';
 import { useWorkspace } from './WorkspaceContext';
@@ -54,7 +56,7 @@ type SqlWorkspaceContextValue = {
   running: boolean;
   executionMeta: ExecutionMeta | null;
   lastMessage: string | null;
-  runQuery: (sqlOverride?: string) => void;
+  runQuery: (sqlOverride?: string, options?: { keepTableSelection?: boolean }) => void;
   formatActiveSql: () => void;
   clearActiveSql: () => void;
   history: QueryHistoryEntry[];
@@ -67,6 +69,7 @@ type SqlWorkspaceContextValue = {
   copyResults: () => Promise<void>;
   exportCsv: () => void;
   exportJson: () => void;
+  exportExcel: () => void;
   saveDialogOpen: boolean;
   openSaveDialog: () => void;
   closeSaveDialog: () => void;
@@ -88,6 +91,7 @@ function markDirty(tab: QueryTab, sql: string, originalSql: string): QueryTab {
 
 export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
   const { selectedDeviceId, hasDatabase, executeQuery, clearQueryError } = useDevTools();
+  const { clearTableSelection } = useExplorer();
   const { setBottomPanelTab, markOutputUnread } = useWorkspace();
   const { showToast } = useToast();
   const { markQueryRun } = useOnboarding();
@@ -226,7 +230,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const runQuery = useCallback(
-    (sqlOverride?: string) => {
+    (sqlOverride?: string, options?: { keepTableSelection?: boolean }) => {
       if (!hasDatabase || running) {
         return;
       }
@@ -238,6 +242,10 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         setBottomPanelTab('output');
         markOutputUnread();
         return;
+      }
+
+      if (!options?.keepTableSelection) {
+        clearTableSelection();
       }
 
       setRunning(true);
@@ -290,6 +298,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       markOutputUnread,
       markQueryRun,
       showToast,
+      clearTableSelection,
     ],
   );
 
@@ -322,7 +331,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       setLastMessage(null);
 
       window.setTimeout(() => {
-        runQuery(nextSql);
+        runQuery(nextSql, { keepTableSelection: true });
       }, 0);
     },
     [updateActiveTabSql, runQuery],
@@ -404,6 +413,18 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
     downloadBlob('query-results.json', formatResultsAsJson(result), 'application/json');
   }, [result]);
 
+  const exportExcel = useCallback(() => {
+    if (!result || result.columns.length === 0) {
+      return;
+    }
+
+    downloadBlob(
+      'query-results.xls',
+      formatResultsAsExcelXml(result),
+      'application/vnd.ms-excel',
+    );
+  }, [result]);
+
   const value = useMemo(
     () => ({
       tabs,
@@ -432,6 +453,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       copyResults,
       exportCsv,
       exportJson,
+      exportExcel,
       saveDialogOpen,
       openSaveDialog: () => setSaveDialogOpen(true),
       closeSaveDialog: () => setSaveDialogOpen(false),
@@ -466,6 +488,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       copyResults,
       exportCsv,
       exportJson,
+      exportExcel,
       saveDialogOpen,
       copyStatus,
       insertSql,

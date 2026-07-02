@@ -10,11 +10,14 @@ import {
 } from 'react';
 import {
   createDevToolsClient,
+  fetchProjectDatabase,
+  fetchProjectDatabaseMeta,
   fetchSnapshot,
   formatRefreshErrorMessage,
   resolveSnapshotDownloadUrl,
   type ConnectionState,
   type DevToolsClient,
+  type ProjectDatabaseMeta,
   type TransactionState,
 } from 'database-devtools/client';
 import { createInspectorForSnapshot, type DatabaseInspector } from 'database-devtools/inspector';
@@ -34,6 +37,10 @@ import {
 import { useToast } from './ToastContext';
 
 export type UiRefreshState = 'idle' | 'refreshing' | 'ready' | 'error';
+
+export type DatabaseSource = 'project' | 'device' | null;
+
+export type ProjectLoadState = 'idle' | 'loading';
 
 export type SnapshotMeta = {
   deviceId: string;
@@ -57,6 +64,12 @@ type DevToolsContextValue = {
   lastSnapshotAt: number | null;
   refreshError: string | null;
   refresh: () => void;
+  databaseSource: DatabaseSource;
+  projectDatabaseAvailable: boolean;
+  projectLoadState: ProjectLoadState;
+  projectLoadError: string | null;
+  loadProjectDatabase: () => Promise<boolean>;
+  reloadProjectDatabase: () => Promise<boolean>;
   hasDatabase: boolean;
   tables: TableInfo[];
   schema: SchemaTable[];
@@ -88,6 +101,10 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [schema, setSchema] = useState<SchemaTable[]>([]);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [databaseLoaded, setDatabaseLoaded] = useState(false);
+  const [databaseSource, setDatabaseSource] = useState<DatabaseSource>(null);
+  const [projectDatabaseAvailable, setProjectDatabaseAvailable] = useState(false);
+  const [projectLoadState, setProjectLoadState] = useState<ProjectLoadState>('idle');
+  const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
   const [transactionState, setTransactionState] = useState<TransactionState>('idle');
 
   const clientRef = useRef<DevToolsClient | null>(null);
@@ -110,6 +127,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setTables([]);
     setSchema([]);
     setDatabaseLoaded(false);
+    setDatabaseSource(null);
   }, []);
 
   const openSnapshot = useCallback(async (bytes: ArrayBuffer, kind: string, mimeType: string) => {
@@ -181,6 +199,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       mimeType: message.mimeType,
       databaseName: message.databaseName,
     });
+    setDatabaseSource('device');
     setLastSnapshotAt(message.exportedAt);
     setRefreshState('ready');
     setSyncState('ready');
@@ -198,6 +217,115 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       variant: 'success',
     });
   }, [openSnapshot, showToast]);
+
+  const applyProjectDatabase = useCallback(
+    async (meta: ProjectDatabaseMeta, bytes: ArrayBuffer, options?: { reload?: boolean }) => {
+      await openSnapshot(bytes, meta.kind ?? 'sqlite', meta.mimeType ?? 'application/x-sqlite3');
+
+      setSnapshotMeta({
+        deviceId: meta.deviceId ?? 'project',
+        size: meta.size ?? bytes.byteLength,
+        exportedAt: meta.updatedAt ?? Date.now(),
+        kind: meta.kind ?? 'sqlite',
+        mimeType: meta.mimeType ?? 'application/x-sqlite3',
+        databaseName: meta.databaseName,
+      });
+      setDatabaseSource('project');
+      setLastSnapshotAt(meta.updatedAt ?? Date.now());
+      setRefreshState('ready');
+      setRefreshError(null);
+      setProjectLoadError(null);
+      setQueryError(null);
+
+      showToast({
+        title: options?.reload ? 'Project database reloaded' : 'Project database loaded',
+        message: meta.databaseName ?? meta.relativePath ?? 'active.db',
+        variant: 'success',
+      });
+    },
+    [openSnapshot, showToast],
+  );
+
+  const loadProjectDatabase = useCallback(
+    async (options?: { silent?: boolean; reload?: boolean }): Promise<boolean> => {
+      const client = clientRef.current;
+
+      if (!client || connectionState !== 'connected') {
+        if (!options?.silent) {
+          setProjectLoadError('Not connected to the DevTools hub');
+        }
+
+        return false;
+      }
+
+      if (projectLoadState === 'loading') {
+        return false;
+      }
+
+      setProjectLoadState('loading');
+
+      if (!options?.silent) {
+        setProjectLoadError(null);
+      }
+
+      const apiOptions = { useSameOriginApi: import.meta.env.DEV };
+
+      try {
+        const meta = await fetchProjectDatabaseMeta(client.getServerUrl(), apiOptions);
+
+        if (!meta.exists) {
+          setProjectDatabaseAvailable(false);
+
+          if (!options?.silent) {
+            setProjectLoadError('No project database found at .devtools/databases/active.db');
+          }
+
+          return false;
+        }
+
+        setProjectDatabaseAvailable(true);
+
+        const bytes = await fetchProjectDatabase(client.getServerUrl(), apiOptions);
+
+        if (!options?.silent) {
+          await applyProjectDatabase(meta, bytes, { reload: options?.reload });
+        } else {
+          await openSnapshot(bytes, meta.kind ?? 'sqlite', meta.mimeType ?? 'application/x-sqlite3');
+          setSnapshotMeta({
+            deviceId: meta.deviceId ?? 'project',
+            size: meta.size ?? bytes.byteLength,
+            exportedAt: meta.updatedAt ?? Date.now(),
+            kind: meta.kind ?? 'sqlite',
+            mimeType: meta.mimeType ?? 'application/x-sqlite3',
+            databaseName: meta.databaseName,
+          });
+          setDatabaseSource('project');
+          setLastSnapshotAt(meta.updatedAt ?? Date.now());
+          setRefreshState('ready');
+          setRefreshError(null);
+          setQueryError(null);
+        }
+
+        return true;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to load project database';
+
+        if (!options?.silent) {
+          setProjectLoadError(message);
+        }
+
+        return false;
+      } finally {
+        setProjectLoadState('idle');
+      }
+    },
+    [applyProjectDatabase, connectionState, openSnapshot, projectLoadState],
+  );
+
+  const reloadProjectDatabase = useCallback(async (): Promise<boolean> => {
+    return loadProjectDatabase({ reload: true });
+  }, [loadProjectDatabase]);
 
   useEffect(() => {
     const client = createDevToolsClient({
@@ -256,9 +384,13 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
 
     if (mobiles.length === 0) {
       setSelectedDeviceId(null);
-      closeSession();
-      setSnapshotMeta(null);
-      setRefreshState('idle');
+
+      if (databaseSource !== 'project') {
+        closeSession();
+        setSnapshotMeta(null);
+        setRefreshState('idle');
+      }
+
       return;
     }
 
@@ -267,7 +399,38 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     if (!selectedDeviceId || !stillConnected) {
       setSelectedDeviceId(mobiles[0]?.deviceId ?? null);
     }
-  }, [deviceStatus, selectedDeviceId, closeSession]);
+  }, [deviceStatus, selectedDeviceId, closeSession, databaseSource]);
+
+  useEffect(() => {
+    if (connectionState !== 'connected') {
+      setProjectDatabaseAvailable(false);
+      return;
+    }
+
+    const client = clientRef.current;
+
+    if (!client) {
+      return;
+    }
+
+    void fetchProjectDatabaseMeta(client.getServerUrl(), {
+      useSameOriginApi: import.meta.env.DEV,
+    })
+      .then((meta) => {
+        setProjectDatabaseAvailable(meta.exists);
+      })
+      .catch(() => {
+        setProjectDatabaseAvailable(false);
+      });
+  }, [connectionState]);
+
+  useEffect(() => {
+    if (connectionState !== 'connected' || databaseLoaded) {
+      return;
+    }
+
+    void loadProjectDatabase({ silent: true });
+  }, [connectionState, databaseLoaded, loadProjectDatabase]);
 
   const selectedDevice = useMemo(() => {
     if (!selectedDeviceId || !deviceStatus) {
@@ -306,7 +469,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     const inspector = inspectorRef.current;
 
     if (!inspector) {
-      throw new Error('No database loaded. Click Refresh to sync from the device.');
+      throw new Error('No database loaded. Refresh from a device or load from the project folder.');
     }
 
     try {
@@ -324,7 +487,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     const inspector = inspectorRef.current;
 
     if (!inspector) {
-      throw new Error('No database loaded. Click Refresh to sync from the device.');
+      throw new Error('No database loaded. Refresh from a device or load from the project folder.');
     }
 
     return inspector.fetchTablePage(request);
@@ -392,6 +555,12 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       lastSnapshotAt,
       refreshError,
       refresh,
+      databaseSource,
+      projectDatabaseAvailable,
+      projectLoadState,
+      projectLoadError,
+      loadProjectDatabase,
+      reloadProjectDatabase,
       hasDatabase: databaseLoaded,
       tables,
       schema,
@@ -417,6 +586,12 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       lastSnapshotAt,
       refreshError,
       refresh,
+      databaseSource,
+      projectDatabaseAvailable,
+      projectLoadState,
+      projectLoadError,
+      loadProjectDatabase,
+      reloadProjectDatabase,
       databaseLoaded,
       tables,
       schema,

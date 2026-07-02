@@ -1,5 +1,5 @@
 import { DeviceSelector } from '../DeviceSelector';
-import { EditModeToggle } from '../edit/EditModeToggle';
+import { ProjectDatabaseControls } from '../ProjectDatabaseControls';
 import { RefreshButton } from '../RefreshButton';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeToggle } from '../ThemeToggle';
@@ -8,9 +8,10 @@ import { useDevTools } from '../../context/DevToolsContext';
 
 type TopBarProps = {
   onMenuToggle: () => void;
+  menuExpanded?: boolean;
 };
 
-export function TopBar({ onMenuToggle }: TopBarProps) {
+export function TopBar({ onMenuToggle, menuExpanded = false }: TopBarProps) {
   const { connectionState, refreshError } = useDevTools();
   const hubOffline = connectionState !== 'connected';
 
@@ -21,6 +22,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           type="button"
           className="top-bar__menu-button"
           onClick={onMenuToggle}
+          aria-expanded={menuExpanded}
           aria-label="Toggle navigation"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -59,7 +61,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           </span>
         )}
         <ActivityIndicator />
-        <EditModeToggle />
+        <ProjectDatabaseControls />
         <RefreshButton />
         <StatusBadge state={connectionState} label={`Hub ${connectionState}`} />
         <ThemeToggle />

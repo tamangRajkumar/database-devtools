@@ -5,10 +5,13 @@ import {
   DEFAULT_DEVTOOLS_PORT,
   DEVICE_SNAPSHOT_API_PATH,
   MAX_SNAPSHOT_BYTES,
+  PROJECT_DATABASE_API_PATH,
+  PROJECT_DATABASE_META_API_PATH,
+  PROJECT_DATABASES_API_PATH,
   buildDevToolsHttpUrl,
   buildDevToolsWsUrl,
 } from '../types/protocol';
-import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER, SNAPSHOT_NAME_HEADER } from '../types/snapshot';
+import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER, SNAPSHOT_NAME_HEADER, SQLITE_SNAPSHOT_MIME_TYPE } from '../types/snapshot';
 import { logger } from '../utils/logger';
 import { attachWebSocket } from './attachWebSocket';
 import { ConnectionManager } from './connectionManager';
@@ -18,6 +21,7 @@ import { Heartbeat } from './heartbeat';
 import { MessageRouter } from './messageRouter';
 import { PendingRefreshStore } from './pendingRefreshStore';
 import { RefreshCoordinator } from './refreshCoordinator';
+import { SnapshotFileStore } from './snapshotFileStore';
 import { SnapshotStore } from './snapshotStore';
 import { WriteCoordinator } from './writeCoordinator';
 import { WriteSessionManager } from './writeSessionManager';
@@ -25,6 +29,8 @@ import { WriteSessionManager } from './writeSessionManager';
 export type DevToolsServerOptions = {
   host?: string;
   port?: number;
+  dataDir?: string;
+  snapshotPersistence?: boolean;
 };
 
 export type DevToolsServer = {
@@ -35,6 +41,7 @@ export type DevToolsServer = {
   router: MessageRouter;
   heartbeat: Heartbeat;
   snapshotStore: SnapshotStore;
+  snapshotFileStore: SnapshotFileStore;
   pendingRefreshStore: PendingRefreshStore;
   writeSessions: WriteSessionManager;
   refreshCoordinator: RefreshCoordinator;
@@ -54,6 +61,10 @@ export async function createDevToolsServer(
   const router = new MessageRouter(connectionManager, deviceRegistry);
   const heartbeat = new Heartbeat(connectionManager, router);
   const snapshotStore = new SnapshotStore();
+  const snapshotFileStore = new SnapshotFileStore({
+    dataDir: options.dataDir,
+    enabled: options.snapshotPersistence,
+  });
   const pendingRefreshStore = new PendingRefreshStore();
   const writeSessions = new WriteSessionManager();
 
@@ -62,6 +73,7 @@ export async function createDevToolsServer(
     router,
     pendingRefreshStore,
     snapshotStore,
+    snapshotFileStore,
   );
   const writeCoordinator = new WriteCoordinator(connectionManager, router, writeSessions);
 
@@ -74,7 +86,7 @@ export async function createDevToolsServer(
   app.post(
     `${DEVICE_SNAPSHOT_API_PATH}/:deviceId/snapshot`,
     express.raw({ type: 'application/octet-stream', limit: MAX_SNAPSHOT_BYTES }),
-    (request, response) => {
+    async (request, response) => {
       const deviceId = decodeURIComponent(request.params.deviceId);
       const body = request.body;
 
@@ -87,7 +99,7 @@ export async function createDevToolsServer(
       const mimeHeader = request.header(SNAPSHOT_MIME_HEADER);
       const nameHeader = request.header(SNAPSHOT_NAME_HEADER);
 
-      const result = refreshCoordinator.handleSnapshotUpload(deviceId, body, {
+      const result = await refreshCoordinator.handleSnapshotUpload(deviceId, body, {
         kind: typeof kindHeader === 'string' ? kindHeader : undefined,
         mimeType: typeof mimeHeader === 'string' ? mimeHeader : undefined,
         databaseName: typeof nameHeader === 'string' ? nameHeader : undefined,
@@ -105,9 +117,9 @@ export async function createDevToolsServer(
     },
   );
 
-  app.get(`${DEVICE_SNAPSHOT_API_PATH}/:deviceId/snapshot`, (request, response) => {
+  app.get(`${DEVICE_SNAPSHOT_API_PATH}/:deviceId/snapshot`, async (request, response) => {
     const deviceId = decodeURIComponent(request.params.deviceId);
-    const snapshot = refreshCoordinator.getSnapshot(deviceId);
+    const snapshot = await refreshCoordinator.getSnapshotAsync(deviceId);
 
     if (!snapshot) {
       response.status(404).json({ ok: false, error: 'SNAPSHOT_NOT_FOUND' });
@@ -118,6 +130,37 @@ export async function createDevToolsServer(
       .status(200)
       .set('Content-Type', 'application/octet-stream')
       .send(snapshot);
+  });
+
+  app.get(PROJECT_DATABASE_META_API_PATH, async (_request, response) => {
+    const meta = await snapshotFileStore.getActiveDatabaseMeta();
+    response.json(meta);
+  });
+
+  app.get(PROJECT_DATABASES_API_PATH, async (_request, response) => {
+    const databases = await snapshotFileStore.listDatabases();
+    response.json({ databases });
+  });
+
+  app.get(PROJECT_DATABASE_API_PATH, async (_request, response) => {
+    const meta = await snapshotFileStore.getActiveDatabaseMeta();
+
+    if (!meta.exists) {
+      response.status(404).json({ ok: false, error: 'PROJECT_DATABASE_NOT_FOUND' });
+      return;
+    }
+
+    const bytes = await snapshotFileStore.readActiveDatabase();
+
+    if (!bytes) {
+      response.status(404).json({ ok: false, error: 'PROJECT_DATABASE_NOT_FOUND' });
+      return;
+    }
+
+    response
+      .status(200)
+      .set('Content-Type', meta.mimeType ?? SQLITE_SNAPSHOT_MIME_TYPE)
+      .send(bytes);
   });
 
   const httpServer = createServer(app);
@@ -154,6 +197,7 @@ export async function createDevToolsServer(
     router,
     heartbeat,
     snapshotStore,
+    snapshotFileStore,
     pendingRefreshStore,
     writeSessions,
     refreshCoordinator,
