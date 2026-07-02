@@ -34,8 +34,7 @@ describe('computeColumnWidths', () => {
 });
 
 describe('defaultMobileDataViewMode', () => {
-  it('prefers cards for small column counts', () => {
-    expect(defaultMobileDataViewMode(3)).toBe('cards');
-    expect(defaultMobileDataViewMode(5)).toBe('table');
+  it('defaults to table view', () => {
+    expect(defaultMobileDataViewMode()).toBe('table');
   });
 });

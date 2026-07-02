@@ -66,8 +66,8 @@ export function totalTableWidth(columnWidths: number[]): number {
   return columnWidths.reduce((sum, width) => sum + width, 0);
 }
 
-export function defaultMobileDataViewMode(columnCount: number): 'table' | 'cards' {
-  return columnCount <= 4 ? 'cards' : 'table';
+export function defaultMobileDataViewMode(): 'table' {
+  return 'table';
 }
 
 export function isMonospaceColumn(columnName: string): boolean {

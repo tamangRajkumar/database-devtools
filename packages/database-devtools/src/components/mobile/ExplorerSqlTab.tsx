@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -23,6 +22,7 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [panel, setPanel] = useState<'results' | 'output'>('results');
+  const [resultKey, setResultKey] = useState(0);
 
   const runQuery = async () => {
     setRunning(true);
@@ -31,6 +31,7 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
     try {
       const queryResult = await inspector.executeQuery(sql);
       setResult(queryResult);
+      setResultKey((current) => current + 1);
       setPanel('results');
     } catch (runError) {
       const message = runError instanceof Error ? runError.message : 'Query failed';
@@ -42,16 +43,66 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
     }
   };
 
+  const renderResultsContent = () => {
+    if (panel === 'output') {
+      if (error) {
+        return <Text style={explorerStyles.errorText}>{error}</Text>;
+      }
+
+      if (result) {
+        return (
+          <Text style={explorerStyles.infoValue}>
+            Query executed successfully. {result.rowCount} row
+            {result.rowCount === 1 ? '' : 's'} in {result.durationMs.toFixed(1)} ms.
+          </Text>
+        );
+      }
+
+      return <Text style={explorerStyles.placeholder}>Messages and errors appear here.</Text>;
+    }
+
+    if (!result) {
+      return (
+        <View style={explorerStyles.sqlResultsEmpty}>
+          <Text style={[explorerStyles.placeholder, { marginTop: 0 }]}>
+            Run a query to see results.
+          </Text>
+        </View>
+      );
+    }
+
+    if (result.columns.length === 0) {
+      return (
+        <View style={explorerStyles.sqlResultsEmpty}>
+          <Text style={[explorerStyles.placeholder, { marginTop: 0 }]}>
+            Query completed with no result set ({result.durationMs.toFixed(1)} ms).
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <MobileDataView
+        columns={result.columns}
+        dataKey={String(resultKey)}
+        defaultMode="table"
+        metaSuffix={`${result.durationMs.toFixed(1)} ms`}
+        rows={result.rows}
+      />
+    );
+  };
+
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+    <View style={explorerStyles.sqlTabRoot}>
+      <View style={explorerStyles.sqlQueryPane}>
         <Text style={explorerStyles.sectionTitle}>SQL (read-only)</Text>
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
           multiline
           onChangeText={setSql}
-          style={explorerStyles.sqlInput}
+          scrollEnabled
+          style={explorerStyles.sqlInputCompact}
           value={sql}
         />
         <Pressable
@@ -65,10 +116,10 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
             <Text style={explorerStyles.primaryButtonLabel}>Run query</Text>
           )}
         </Pressable>
-        <Text style={explorerStyles.hintText}>
+        <Text style={[explorerStyles.hintText, { marginTop: 0 }]}>
           Allowed: SELECT, PRAGMA, EXPLAIN, WITH. Writes are blocked in DevTools.
         </Text>
-      </ScrollView>
+      </View>
 
       <View style={[explorerStyles.tabRow, { flexShrink: 0 }]}>
         <Pressable
@@ -93,34 +144,7 @@ export function ExplorerSqlTab({ inspector }: ExplorerSqlTabProps) {
         </Pressable>
       </View>
 
-      <View style={{ flex: 1, minHeight: 0, paddingHorizontal: 16, paddingBottom: 16 }}>
-        {panel === 'results' ? (
-          result ? (
-            result.columns.length > 0 ? (
-              <MobileDataView
-                columns={result.columns}
-                metaSuffix={`${result.durationMs.toFixed(1)} ms`}
-                rows={result.rows}
-              />
-            ) : (
-              <Text style={explorerStyles.placeholder}>
-                Query completed with no result set ({result.durationMs.toFixed(1)} ms).
-              </Text>
-            )
-          ) : (
-            <Text style={explorerStyles.placeholder}>Run a query to see results.</Text>
-          )
-        ) : error ? (
-          <Text style={explorerStyles.errorText}>{error}</Text>
-        ) : result ? (
-          <Text style={explorerStyles.infoValue}>
-            Query executed successfully. {result.rowCount} row
-            {result.rowCount === 1 ? '' : 's'} in {result.durationMs.toFixed(1)} ms.
-          </Text>
-        ) : (
-          <Text style={explorerStyles.placeholder}>Messages and errors appear here.</Text>
-        )}
-      </View>
+      <View style={explorerStyles.sqlResultsPane}>{renderResultsContent()}</View>
     </View>
   );
 }

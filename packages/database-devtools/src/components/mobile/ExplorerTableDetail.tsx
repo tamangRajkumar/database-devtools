@@ -115,6 +115,8 @@ export function ExplorerTableDetail({ inspector, tableName, onBack }: ExplorerTa
               <View style={tableStyles.detailDataPane}>
                 <MobileDataView
                   columns={pageResult.columns}
+                  dataKey={`${tableName}-${page}-${search}`}
+                  defaultMode="table"
                   metaSuffix={`page ${page} of ${totalPages}`}
                   rows={pageResult.rows}
                 />

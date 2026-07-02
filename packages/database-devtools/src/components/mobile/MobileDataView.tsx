@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import {
   computeColumnWidths,
-  defaultMobileDataViewMode,
   totalTableWidth,
 } from '../../mobile/computeColumnWidths';
 import { MobileDataCardList } from './MobileDataCardList';
@@ -15,13 +14,26 @@ type MobileDataViewProps = {
   columns: string[];
   rows: (string | number | null)[][];
   metaSuffix?: string;
+  defaultMode?: MobileDataViewMode;
+  dataKey?: string;
 };
 
-export function MobileDataView({ columns, rows, metaSuffix }: MobileDataViewProps) {
-  const [mode, setMode] = useState<MobileDataViewMode>(() => defaultMobileDataViewMode(columns.length));
+export function MobileDataView({
+  columns,
+  rows,
+  metaSuffix,
+  defaultMode = 'table',
+  dataKey,
+}: MobileDataViewProps) {
+  const [mode, setMode] = useState<MobileDataViewMode>(defaultMode);
 
   const columnWidths = useMemo(() => computeColumnWidths(columns, rows), [columns, rows]);
   const tableWidth = useMemo(() => totalTableWidth(columnWidths), [columnWidths]);
+  const columnsKey = columns.join('|');
+
+  useEffect(() => {
+    setMode(defaultMode);
+  }, [columnsKey, dataKey, defaultMode, rows.length]);
 
   if (columns.length === 0) {
     return <Text style={explorerStyles.placeholder}>No rows to display.</Text>;
