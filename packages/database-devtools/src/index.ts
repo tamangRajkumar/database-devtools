@@ -41,6 +41,7 @@ export {
   PROJECT_DATABASE_API_PATH,
   PROJECT_DATABASE_META_API_PATH,
   PROJECT_DATABASES_API_PATH,
+  PROJECT_DEVICE_EXPORTS_API_PATH,
   DevToolsRole,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
@@ -124,6 +125,17 @@ export {
 } from './inspector';
 export type { ConnectionState, DevToolsClient, DevToolsClientOptions, TransactionState } from './client/createDevToolsClient';
 export { createDevToolsClient } from './client/createDevToolsClient';
+export {
+  fetchDeviceExportDatabase,
+  fetchDeviceExportMeta,
+  fetchDeviceExports,
+} from './client/deviceDatabase';
+export type { DeviceExportMeta, ListedDeviceExport } from './client/deviceDatabase';
+export {
+  resolveDeviceExportDatabaseMetaUrl,
+  resolveDeviceExportDatabaseUrl,
+  resolveDeviceExportsUrl,
+} from './client/resolveDeviceDatabaseUrl';
 export { fetchSnapshot } from './client/fetchSnapshot';
 export {
   fetchProjectDatabase,

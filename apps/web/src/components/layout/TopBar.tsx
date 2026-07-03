@@ -1,5 +1,4 @@
 import { DeviceSelector } from '../DeviceSelector';
-import { ProjectDatabaseControls } from '../ProjectDatabaseControls';
 import { RefreshButton } from '../RefreshButton';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeToggle } from '../ThemeToggle';
@@ -50,7 +49,7 @@ export function TopBar({ onMenuToggle, menuExpanded = false }: TopBarProps) {
         {hubOffline && (
           <span
             className="top-bar__hub-chip"
-            title="Start the CLI with pnpm dev:cli in the database-devtools folder"
+            title="Run npx database-devtools to start the hub and browser UI"
           >
             Hub offline
           </span>
@@ -61,7 +60,6 @@ export function TopBar({ onMenuToggle, menuExpanded = false }: TopBarProps) {
           </span>
         )}
         <ActivityIndicator />
-        <ProjectDatabaseControls />
         <RefreshButton />
         <StatusBadge state={connectionState} label={`Hub ${connectionState}`} />
         <ThemeToggle />

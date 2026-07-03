@@ -1,14 +1,24 @@
-import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { SQLITE_SNAPSHOT_MIME_TYPE } from '../types/snapshot';
 import {
+  dedupeListedDeviceExports,
+  findManifestEntryByDeviceId,
+  reconcileLegacyManifestEntries,
+  removedManifestEntries,
+  selectDeviceExportEntriesToPrune,
+} from './deviceExportStorage';
+import { migrateLegacyActiveDatabase } from './migrateLegacyActiveDb';
+import {
+  deviceDatabaseRelativePath,
   deviceLatestRelativePath,
+  deviceStorageManifestId,
+  deviceStorageRelativePath,
   ensureProjectDirectories,
   isPersistenceEnabled,
-  loadProjectConfig,
   readManifest,
-  resolveActiveDatabasePath,
   resolveDataDir,
+  resolveDeviceStorageKey,
   resolveProjectPaths,
   sanitizePathSegment,
   upsertManifestEntry,
@@ -38,6 +48,8 @@ export type ListedProjectDatabase = {
   relativePath: string;
   source: DatabaseManifestEntry['source'];
   deviceId?: string;
+  bundleId?: string;
+  storageKey?: string;
   databaseName?: string;
   size: number;
   updatedAt: number;
@@ -70,32 +82,34 @@ export class SnapshotFileStore {
     await writeDefaultProjectConfig(this.dataDir);
     await ensureProjectDirectories(this.dataDir);
 
-    const config = await loadProjectConfig(this.dataDir);
-    const deviceRelativePath = deviceLatestRelativePath(input.deviceId);
+    const storageKey = resolveDeviceStorageKey({
+      bundleId: input.bundleId,
+      deviceId: input.deviceId,
+    });
+    const deviceRelativePath = deviceStorageRelativePath(storageKey);
     const deviceAbsolutePath = path.join(this.dataDir, deviceRelativePath);
     const exportedAt = Date.now();
+
+    await this.pruneDeviceExports({
+      keepStorageKey: storageKey,
+      keepDeviceId: input.deviceId,
+      bundleId: input.bundleId,
+      databaseName: input.databaseName,
+    });
 
     await mkdir(path.dirname(deviceAbsolutePath), { recursive: true });
     await writeFile(deviceAbsolutePath, input.bytes);
 
-    let activeRelativePath: string | undefined;
-
-    if (config.deviceSync?.promoteLatestToActive !== false) {
-      const activeAbsolutePath = resolveActiveDatabasePath(this.dataDir, config);
-      activeRelativePath = path.relative(this.dataDir, activeAbsolutePath).replace(/\\/g, '/');
-
-      await mkdir(path.dirname(activeAbsolutePath), { recursive: true });
-      await copyFile(deviceAbsolutePath, activeAbsolutePath);
-    }
-
     const manifest = await readManifest(this.dataDir);
 
     const deviceEntry: DatabaseManifestEntry = {
-      id: `device:${input.deviceId}`,
+      id: deviceStorageManifestId(storageKey),
       label: input.databaseName ?? `Device ${input.deviceId}`,
       relativePath: deviceRelativePath.replace(/\\/g, '/'),
       source: 'device',
       deviceId: input.deviceId,
+      bundleId: input.bundleId,
+      storageKey,
       kind: input.kind,
       mimeType: input.mimeType,
       databaseName: input.databaseName,
@@ -103,50 +117,256 @@ export class SnapshotFileStore {
       updatedAt: exportedAt,
     };
 
-    let nextManifest = upsertManifestEntry(manifest, deviceEntry);
-
-    if (activeRelativePath) {
-      const activeEntry: DatabaseManifestEntry = {
-        id: 'active',
-        label: input.databaseName ?? 'active.db',
-        relativePath: activeRelativePath,
-        source: 'active',
-        deviceId: input.deviceId,
-        kind: input.kind,
-        mimeType: input.mimeType,
-        databaseName: input.databaseName,
-        size: input.bytes.byteLength,
-        updatedAt: exportedAt,
-      };
-
-      nextManifest = upsertManifestEntry(nextManifest, activeEntry);
-    }
+    const nextManifest = upsertManifestEntry(manifest, deviceEntry);
 
     await writeManifest(this.dataDir, nextManifest);
 
     return {
       deviceRelativePath: deviceRelativePath.replace(/\\/g, '/'),
-      activeRelativePath,
       exportedAt,
       size: input.bytes.byteLength,
     };
   }
 
+  async reconcileOnMobileConnect(input: {
+    deviceId: string;
+    bundleId?: string;
+  }): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    await this.reconcileLegacyExports(input.deviceId);
+
+    const storageKey = resolveDeviceStorageKey({
+      bundleId: input.bundleId,
+      deviceId: input.deviceId,
+    });
+    const manifest = await readManifest(this.dataDir);
+    const canonicalEntry = manifest.entries.find(
+      (entry) => entry.source === 'device' && entry.storageKey === storageKey,
+    );
+
+    if (canonicalEntry && canonicalEntry.deviceId !== input.deviceId) {
+      const updated = upsertManifestEntry(manifest, {
+        ...canonicalEntry,
+        deviceId: input.deviceId,
+        bundleId: input.bundleId ?? canonicalEntry.bundleId,
+        updatedAt: Date.now(),
+      });
+
+      await writeManifest(this.dataDir, updated);
+    }
+
+    await this.pruneDeviceExports({
+      keepStorageKey: storageKey,
+      keepDeviceId: input.deviceId,
+      bundleId: input.bundleId,
+      databaseName: canonicalEntry?.databaseName,
+    });
+  }
+
   async readDeviceSnapshot(deviceId: string): Promise<Buffer | undefined> {
+    return this.readDeviceDatabase(deviceId);
+  }
+
+  async readDeviceDatabase(deviceId: string): Promise<Buffer | undefined> {
     if (!this.enabled) {
       return undefined;
     }
 
-    const relativePath = deviceLatestRelativePath(deviceId);
-    const absolutePath = path.join(this.dataDir, relativePath);
+    const resolved = await this.resolveDeviceDatabaseFile(deviceId);
+
+    if (!resolved) {
+      return undefined;
+    }
 
     try {
-      return await readFile(absolutePath);
+      return await readFile(resolved.absolutePath);
     } catch {
       return undefined;
     }
   }
 
+  async getDeviceDatabaseMeta(deviceId: string): Promise<ProjectDatabaseMeta> {
+    if (!this.enabled) {
+      return { exists: false, deviceId };
+    }
+
+    const resolved = await this.resolveDeviceDatabaseFile(deviceId);
+
+    if (!resolved) {
+      return { exists: false, deviceId };
+    }
+
+    try {
+      const fileStat = await stat(resolved.absolutePath);
+      const manifest = await readManifest(this.dataDir);
+      const entry = manifest.entries.find(
+        (item) => item.deviceId === deviceId && item.source === 'device',
+      );
+
+      return {
+        exists: true,
+        relativePath: resolved.relativePath,
+        absolutePath: resolved.absolutePath,
+        kind: entry?.kind ?? 'sqlite',
+        mimeType: entry?.mimeType ?? SQLITE_SNAPSHOT_MIME_TYPE,
+        databaseName: entry?.databaseName ?? path.basename(resolved.absolutePath),
+        size: fileStat.size,
+        updatedAt: entry?.updatedAt ?? fileStat.mtimeMs,
+        source: 'device',
+        deviceId,
+      };
+    } catch {
+      return { exists: false, deviceId, relativePath: resolved.relativePath };
+    }
+  }
+
+  async listDeviceExports(): Promise<ListedProjectDatabase[]> {
+    await this.reconcileLegacyExports();
+    const databases = await this.listDatabases();
+    const deviceExports = databases.filter((entry) => entry.source === 'device' && entry.deviceId);
+    return dedupeListedDeviceExports(deviceExports);
+  }
+
+  private async reconcileLegacyExports(preferredDeviceId?: string): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    await migrateLegacyActiveDatabase(this.dataDir);
+
+    const manifest = await readManifest(this.dataDir);
+    const nextEntries = reconcileLegacyManifestEntries({
+      entries: manifest.entries,
+      preferredDeviceId,
+    });
+
+    if (nextEntries.length === manifest.entries.length) {
+      const sameOrder = nextEntries.every((entry, index) => entry.id === manifest.entries[index]?.id);
+
+      if (sameOrder) {
+        return;
+      }
+    }
+
+    const removed = removedManifestEntries(manifest.entries, nextEntries);
+
+    for (const entry of removed) {
+      await this.deleteEntryFiles(entry);
+    }
+
+    await writeManifest(this.dataDir, {
+      ...manifest,
+      entries: nextEntries,
+    });
+  }
+
+  private async pruneDeviceExports(input: {
+    keepStorageKey: string;
+    keepDeviceId: string;
+    bundleId?: string;
+    databaseName?: string;
+  }): Promise<void> {
+    const manifest = await readManifest(this.dataDir);
+    const removed = selectDeviceExportEntriesToPrune(manifest.entries, input);
+
+    if (removed.length === 0) {
+      return;
+    }
+
+    for (const entry of removed) {
+      await this.deleteEntryFiles(entry);
+    }
+
+    const removedIds = new Set(removed.map((entry) => entry.id));
+
+    await writeManifest(this.dataDir, {
+      ...manifest,
+      entries: manifest.entries.filter((entry) => !removedIds.has(entry.id)),
+    });
+  }
+
+  private async deleteEntryFiles(entry: DatabaseManifestEntry): Promise<void> {
+    const absolutePath = path.join(this.dataDir, entry.relativePath);
+
+    try {
+      await rm(absolutePath, { force: true });
+    } catch {
+      // ignore missing files
+    }
+
+    try {
+      await rm(path.dirname(absolutePath), { recursive: true, force: true });
+    } catch {
+      // ignore cleanup failures
+    }
+  }
+
+  private manifestEntryToListed(entry: DatabaseManifestEntry, fileStat: { size: number }): ListedProjectDatabase {
+    return {
+      id: entry.id,
+      label: entry.label,
+      relativePath: entry.relativePath,
+      source: entry.source,
+      deviceId: entry.deviceId,
+      bundleId: entry.bundleId,
+      storageKey: entry.storageKey,
+      databaseName: entry.databaseName,
+      size: fileStat.size,
+      updatedAt: entry.updatedAt,
+    };
+  }
+
+  private async resolveDeviceDatabaseFile(
+    deviceId: string,
+  ): Promise<{ relativePath: string; absolutePath: string } | undefined> {
+    const manifest = await readManifest(this.dataDir);
+    const manifestEntry = findManifestEntryByDeviceId(manifest.entries, deviceId);
+
+    if (manifestEntry) {
+      const absolutePath = path.join(this.dataDir, manifestEntry.relativePath);
+
+      try {
+        await stat(absolutePath);
+        return { relativePath: manifestEntry.relativePath, absolutePath };
+      } catch {
+        // fall through to legacy paths
+      }
+    }
+
+    const candidates = [
+      deviceDatabaseRelativePath(deviceId),
+      deviceLatestRelativePath(deviceId),
+    ];
+
+    for (const relativePath of candidates) {
+      const absolutePath = path.join(this.dataDir, relativePath);
+
+      try {
+        await stat(absolutePath);
+        return { relativePath, absolutePath };
+      } catch {
+        // try next candidate
+      }
+    }
+
+    if (!manifestEntry) {
+      return undefined;
+    }
+
+    const absolutePath = path.join(this.dataDir, manifestEntry.relativePath);
+
+    try {
+      await stat(absolutePath);
+      return { relativePath: manifestEntry.relativePath, absolutePath };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** @deprecated Proxies to the newest device export for backward-compatible API callers. */
   async readActiveDatabase(): Promise<Buffer | undefined> {
     if (!this.enabled) {
       return undefined;
@@ -154,48 +374,29 @@ export class SnapshotFileStore {
 
     const meta = await this.getActiveDatabaseMeta();
 
-    if (!meta.exists || !meta.absolutePath) {
+    if (!meta.exists || !meta.deviceId) {
       return undefined;
     }
 
-    try {
-      return await readFile(meta.absolutePath);
-    } catch {
-      return undefined;
-    }
+    return this.readDeviceDatabase(meta.deviceId);
   }
 
+  /** @deprecated Proxies to the newest device export for backward-compatible API callers. */
   async getActiveDatabaseMeta(): Promise<ProjectDatabaseMeta> {
     if (!this.enabled) {
       return { exists: false };
     }
 
-    const config = await loadProjectConfig(this.dataDir);
-    const absolutePath = resolveActiveDatabasePath(this.dataDir, config);
-    const relativePath = path.relative(this.dataDir, absolutePath).replace(/\\/g, '/');
+    await migrateLegacyActiveDatabase(this.dataDir);
 
-    try {
-      const fileStat = await stat(absolutePath);
-      const manifest = await readManifest(this.dataDir);
-      const entry =
-        manifest.entries.find((item) => item.id === 'active') ??
-        manifest.entries.find((item) => item.relativePath === relativePath);
+    const exports = await this.listDeviceExports();
+    const latest = exports[0];
 
-      return {
-        exists: true,
-        relativePath,
-        absolutePath,
-        kind: entry?.kind ?? 'sqlite',
-        mimeType: entry?.mimeType ?? SQLITE_SNAPSHOT_MIME_TYPE,
-        databaseName: entry?.databaseName ?? path.basename(absolutePath),
-        size: fileStat.size,
-        updatedAt: entry?.updatedAt ?? fileStat.mtimeMs,
-        source: entry?.source ?? 'active',
-        deviceId: entry?.deviceId,
-      };
-    } catch {
-      return { exists: false, relativePath };
+    if (!latest?.deviceId) {
+      return { exists: false };
     }
+
+    return this.getDeviceDatabaseMeta(latest.deviceId);
   }
 
   async listDatabases(): Promise<ListedProjectDatabase[]> {
@@ -204,58 +405,25 @@ export class SnapshotFileStore {
     }
 
     await ensureProjectDirectories(this.dataDir);
+    await this.reconcileLegacyExports();
 
     const manifest = await readManifest(this.dataDir);
     const listed = new Map<string, ListedProjectDatabase>();
 
     for (const entry of manifest.entries) {
+      if (entry.source === 'active' || entry.id.startsWith('import:')) {
+        continue;
+      }
+
       const absolutePath = path.join(this.dataDir, entry.relativePath);
 
       try {
         const fileStat = await stat(absolutePath);
 
-        listed.set(entry.id, {
-          id: entry.id,
-          label: entry.label,
-          relativePath: entry.relativePath,
-          source: entry.source,
-          deviceId: entry.deviceId,
-          databaseName: entry.databaseName,
-          size: fileStat.size,
-          updatedAt: entry.updatedAt,
-        });
+        listed.set(entry.id, this.manifestEntryToListed(entry, fileStat));
       } catch {
         // Ignore missing files from manifest.
       }
-    }
-
-    const { importsDir } = resolveProjectPaths(this.dataDir);
-
-    try {
-      const importFiles = await readdir(importsDir);
-
-      for (const fileName of importFiles) {
-        if (!fileName.toLowerCase().endsWith('.db')) {
-          continue;
-        }
-
-        const relativePath = path.join('databases', 'imports', fileName).replace(/\\/g, '/');
-        const id = `import:${fileName}`;
-        const absolutePath = path.join(importsDir, fileName);
-        const fileStat = await stat(absolutePath);
-
-        listed.set(id, {
-          id,
-          label: fileName,
-          relativePath,
-          source: 'import',
-          databaseName: fileName,
-          size: fileStat.size,
-          updatedAt: fileStat.mtimeMs,
-        });
-      }
-    } catch {
-      // imports directory may not exist yet.
     }
 
     return [...listed.values()].sort((left, right) => right.updatedAt - left.updatedAt);

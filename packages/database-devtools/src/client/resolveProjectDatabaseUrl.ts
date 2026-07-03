@@ -2,6 +2,7 @@ import {
   PROJECT_DATABASE_API_PATH,
   PROJECT_DATABASE_META_API_PATH,
   PROJECT_DATABASES_API_PATH,
+  wsUrlToHttpUrl,
 } from '../types/protocol';
 
 export type ResolveProjectDatabaseUrlOptions = {
@@ -11,6 +12,10 @@ export type ResolveProjectDatabaseUrlOptions = {
 function resolveApiBase(serverUrl: string, options?: ResolveProjectDatabaseUrlOptions): string {
   if (options?.useSameOriginApi && typeof window !== 'undefined') {
     return window.location.origin;
+  }
+
+  if (serverUrl.startsWith('ws://') || serverUrl.startsWith('wss://')) {
+    return wsUrlToHttpUrl(serverUrl);
   }
 
   return serverUrl.replace(/\/$/, '');

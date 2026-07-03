@@ -138,12 +138,15 @@ export class RefreshCoordinator {
       databaseName: metadata?.databaseName,
     });
 
+    const mobile = this.connectionManager.getByDeviceId(deviceId);
+
     await this.snapshotFiles?.persistDeviceSnapshot({
       deviceId,
       bytes: body,
       kind: stored.kind,
       mimeType: stored.mimeType,
       databaseName: stored.databaseName,
+      bundleId: mobile?.metadata?.bundleId,
     });
 
     logger.refreshUploaded(deviceId, body.byteLength);

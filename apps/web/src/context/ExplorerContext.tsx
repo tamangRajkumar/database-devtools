@@ -15,11 +15,6 @@ import { useDevTools } from './DevToolsContext';
 
 export type ExplorerView = 'data' | 'schema';
 
-export type ExplorerRow = {
-  index: number;
-  values: Record<string, string | number | null>;
-};
-
 type ExplorerContextValue = {
   selectedTable: string | null;
   setSelectedTable: (table: string | null) => void;
@@ -44,8 +39,6 @@ type ExplorerContextValue = {
   toggleSort: (column: string) => void;
   tablePage: TablePageResult | null;
   tableColumns: ColumnInfo[];
-  selectedRow: ExplorerRow | null;
-  setSelectedRow: (row: ExplorerRow | null) => void;
   totalPages: number;
   dataVersion: number;
   bumpDataVersion: () => void;
@@ -56,7 +49,7 @@ const ExplorerContext = createContext<ExplorerContextValue | null>(null);
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
 export function ExplorerProvider({ children }: { children: ReactNode }) {
-  const { hasDatabase, tables, schema, fetchTablePage, selectedDeviceId } = useDevTools();
+  const { hasDatabase, tables, schema, fetchTablePage, databaseSessionId } = useDevTools();
 
   const [selectedTable, setSelectedTableState] = useState<string | null>(null);
   const [view, setView] = useState<ExplorerView>('data');
@@ -71,11 +64,10 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     column: null,
     dir: 'asc',
   });
-  const [selectedRow, setSelectedRow] = useState<ExplorerRow | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
 
   const userClearedSelectionRef = useRef(false);
-  const previousDeviceIdRef = useRef<string | null>(selectedDeviceId);
+  const previousDeviceIdRef = useRef<string | null>(databaseSessionId);
 
   const bumpDataVersion = useCallback(() => {
     setDataVersion((version) => version + 1);
@@ -91,7 +83,6 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
 
   const clearTableSelection = useCallback(() => {
     userClearedSelectionRef.current = true;
-    setSelectedRow(null);
     setSelectedTableState(null);
   }, []);
 
@@ -109,14 +100,14 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
   }, [schema, selectedTable]);
 
   useEffect(() => {
-    if (selectedDeviceId === previousDeviceIdRef.current) {
+    if (databaseSessionId === previousDeviceIdRef.current) {
       return;
     }
 
-    previousDeviceIdRef.current = selectedDeviceId;
+    previousDeviceIdRef.current = databaseSessionId;
     userClearedSelectionRef.current = false;
     setSelectedTableState(null);
-  }, [selectedDeviceId]);
+  }, [databaseSessionId]);
 
   useEffect(() => {
     if (!hasDatabase) {
@@ -152,12 +143,10 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
     setRowSearch('');
     setDebouncedRowSearch('');
     setSort({ column: null, dir: 'asc' });
-    setSelectedRow(null);
   }, [selectedTable]);
 
   useEffect(() => {
     setPage(1);
-    setSelectedRow(null);
   }, [debouncedRowSearch, sort.column, sort.dir, pageSize]);
 
   const tablePage = useMemo(() => {
@@ -234,8 +223,6 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       toggleSort,
       tablePage,
       tableColumns,
-      selectedRow,
-      setSelectedRow,
       totalPages,
       dataVersion,
       bumpDataVersion,
@@ -258,7 +245,6 @@ export function ExplorerProvider({ children }: { children: ReactNode }) {
       toggleSort,
       tablePage,
       tableColumns,
-      selectedRow,
       totalPages,
       dataVersion,
       bumpDataVersion,

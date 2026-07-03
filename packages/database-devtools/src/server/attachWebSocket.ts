@@ -19,7 +19,12 @@ import type { ConnectionManager } from './connectionManager';
 import type { Heartbeat } from './heartbeat';
 import type { MessageRouter } from './messageRouter';
 import type { RefreshCoordinator } from './refreshCoordinator';
+import type { SnapshotFileStore } from './snapshotFileStore';
 import type { WriteCoordinator } from './writeCoordinator';
+
+export type AttachWebSocketOptions = {
+  snapshotFileStore?: SnapshotFileStore;
+};
 
 export type AttachWebSocketResult = {
   wss: WebSocketServer;
@@ -32,6 +37,7 @@ export function attachWebSocket(
   heartbeat: Heartbeat,
   refreshCoordinator: RefreshCoordinator,
   writeCoordinator: WriteCoordinator,
+  options?: AttachWebSocketOptions,
 ): AttachWebSocketResult {
   const wss = new WebSocketServer({ server: httpServer, path: DEVTOOLS_WS_PATH });
 
@@ -82,6 +88,18 @@ export function attachWebSocket(
 
         if (client.role === DevToolsRole.MOBILE) {
           logger.mobileConnected(client.deviceId);
+
+          if (client.deviceId && options?.snapshotFileStore) {
+            void options.snapshotFileStore
+              .reconcileOnMobileConnect({
+                deviceId: client.deviceId,
+                bundleId: client.metadata?.bundleId,
+              })
+              .finally(() => {
+                router.broadcastDeviceStatus();
+              });
+            return;
+          }
         } else {
           logger.browserConnected(client.connectionId);
         }

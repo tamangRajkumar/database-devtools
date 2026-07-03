@@ -21,6 +21,7 @@ import { DevToolsRole, REFRESH_TIMEOUT_MS } from '../types/protocol';
 import { getConnectionHint } from '../utils/resolveDevToolsHost';
 import { resolveDeviceMetadata } from '../utils/resolveDeviceMetadata';
 import { normalizeServerUrl, resolveServerUrl } from '../utils/resolveServerUrl';
+import { loadOrCreateDeviceId } from '../utils/persistDeviceId';
 import { createExpoSqliteInspector } from '../mobile/createExpoSqliteInspector';
 import type { MobileDatabaseInspector } from '../mobile/types';
 
@@ -50,6 +51,7 @@ export function DevToolsProvider({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState(() => resolveServerUrl(initialServerUrl));
   const [deviceId, setDeviceId] = useState<string | undefined>();
+  const [deviceIdReady, setDeviceIdReady] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [launcherVisible, setLauncherVisible] = useState(false);
   const [explorerVisible, setExplorerVisible] = useState(false);
@@ -175,9 +177,29 @@ export function DevToolsProvider({
   }, [resolvedAdapter]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    void loadOrCreateDeviceId().then((persistedId) => {
+      if (!cancelled) {
+        setDeviceId(persistedId);
+        setDeviceIdReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!deviceIdReady || !deviceId) {
+      return;
+    }
+
     const client = createDevToolsClient({
       serverUrl,
       role: DevToolsRole.MOBILE,
+      deviceId,
       metadata,
       onConnect: () => {
         setConnectionError(null);
@@ -282,7 +304,7 @@ export function DevToolsProvider({
         exportSuccessTimeoutRef.current = null;
       }
     };
-  }, [serverUrl, metadata, clearExportWaiters]);
+  }, [serverUrl, metadata, clearExportWaiters, deviceIdReady, deviceId]);
 
   const openLauncher = useCallback(() => {
     setLauncherVisible(true);

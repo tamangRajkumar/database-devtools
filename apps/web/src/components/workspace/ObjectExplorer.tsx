@@ -5,7 +5,7 @@ import { useExplorer } from '../../context/ExplorerContext';
 import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { RefreshButton } from '../RefreshButton';
-import { resolveDeviceLabel, shortenDeviceId } from 'database-devtools/client';
+import { shortenDeviceId } from 'database-devtools/client';
 import {
   ChevronIcon,
   DatabaseIcon,
@@ -24,7 +24,7 @@ type ContextMenuState = {
 };
 
 export function ObjectExplorer() {
-  const { selectedDevice, deviceStatus, hasDatabase, tables, snapshotMeta } = useDevTools();
+  const { selectedDevice, deviceDisplayName, hasDatabase, tables, snapshotMeta } = useDevTools();
   const { selectedTable, setSelectedTable, setView } = useExplorer();
   const { insertSql, insertSqlAndRun } = useSqlWorkspace();
   const { setBottomPanelTab } = useWorkspace();
@@ -36,16 +36,16 @@ export function ObjectExplorer() {
     [tables, search],
   );
 
-  if (!selectedDevice) {
+  if (!hasDatabase) {
     return (
       <div className="object-explorer object-explorer--empty">
-        <p>Select a connected device to explore its database.</p>
+        <p>No database loaded for this device.</p>
       </div>
     );
   }
 
-  const label = resolveDeviceLabel(selectedDevice.deviceId, deviceStatus);
-  const deviceTitle = `${label.deviceName} (${shortenDeviceId(label.deviceId)})`;
+  const deviceId = selectedDevice?.deviceId ?? snapshotMeta?.deviceId ?? 'unknown';
+  const deviceTitle = `${deviceDisplayName} (${shortenDeviceId(deviceId)})`;
   const databaseName = snapshotMeta?.databaseName ?? snapshotMeta?.kind ?? 'sqlite';
 
   const handleBrowseData = (tableName: string) => {

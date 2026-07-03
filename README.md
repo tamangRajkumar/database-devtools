@@ -42,16 +42,25 @@ Pass the **raw expo-sqlite instance** — SQLite is auto-detected. Optional over
 ### Inspector hub + browser UI
 
 ```bash
-# From this monorepo (development)
-pnpm install && pnpm build
-pnpm dev:cli    # hub on :3847
-pnpm dev:web    # browser UI on :5173
-
-# Or publish workflow — run the CLI from npm
 npx database-devtools
 ```
 
-Open the web UI, select your device, and click **Refresh** to sync a snapshot.
+That single command starts the hub and opens the browser UI on [http://localhost:3847](http://localhost:3847). Each device export is saved to `.devtools/databases/devices/{bundleId}/database.db` (one file per app) and can be browsed even when the phone is offline.
+
+**Monorepo development** (hot reload for the web UI):
+
+```bash
+pnpm install && pnpm build
+pnpm dev:cli    # hub on :3847
+pnpm dev:web    # browser UI on :5173 (proxies API to hub)
+```
+
+**Optional environment variables:**
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DATABASE_DEVTOOLS_NO_OPEN` | unset | Set to `1` to skip auto-opening the browser |
+| `DATABASE_DEVTOOLS_PORT` | `3847` | Hub + UI port when using `npx database-devtools` |
 
 For physical devices, set your machine's LAN IP:
 
@@ -91,10 +100,19 @@ database-devtools/
 
 ```bash
 pnpm install
-pnpm build
+pnpm build          # builds hub, inspector, and bundled browser UI (dist/web)
 pnpm test
 pnpm dev:example   # Expo example app
 ```
+
+**Local development:**
+
+```bash
+pnpm dev:cli       # hub on :3847 (serves bundled UI if you ran pnpm build)
+pnpm dev:web       # Vite dev server on :5173 with hot reload
+```
+
+End users run a single command after install: `npx database-devtools`.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines and [CHANGELOG.md](./CHANGELOG.md) for release history.
 

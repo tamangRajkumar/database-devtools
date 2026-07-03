@@ -1,6 +1,5 @@
 {
-  "defaultDatabase": "databases/active.db",
   "deviceSync": {
-    "promoteLatestToActive": true
+    "promoteLatestToActive": false
   }
 }

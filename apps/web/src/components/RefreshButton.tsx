@@ -27,10 +27,11 @@ export function RefreshButton() {
     syncState,
     refreshError,
     refresh,
+    canRefreshFromDevice,
   } = useDevTools();
 
   const disabled =
-    connectionState !== 'connected' || !selectedDeviceId || refreshState === 'refreshing';
+    !canRefreshFromDevice || refreshState === 'refreshing';
 
   const statusLabel = refreshStateLabel(syncState);
 

@@ -37,9 +37,13 @@ export const logger = {
     log(CYAN, '✓', `Broadcast Sent${suffix}`);
   },
 
-  serverStarted(url: string, wsUrl: string): void {
+  serverStarted(url: string, wsUrl: string, webUiEnabled = false): void {
     log(GREEN, '✓', `Server started at ${url}`);
     log(GREEN, '✓', `WebSocket endpoint ${wsUrl}`);
+
+    if (webUiEnabled) {
+      log(GREEN, '✓', `Browser UI available at ${url}`);
+    }
   },
 
   heartbeatTimeout(connectionId: string): void {

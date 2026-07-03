@@ -15,7 +15,7 @@ export type ProjectDatabaseMeta = {
   databaseName?: string;
   size?: number;
   updatedAt?: number;
-  source?: 'active' | 'device' | 'import';
+  source?: 'active' | 'device';
   deviceId?: string;
 };
 
@@ -23,13 +23,16 @@ export type ListedProjectDatabase = {
   id: string;
   label: string;
   relativePath: string;
-  source: 'active' | 'device' | 'import';
+  source: 'active' | 'device';
   deviceId?: string;
+  bundleId?: string;
+  storageKey?: string;
   databaseName?: string;
   size: number;
   updatedAt: number;
 };
 
+/** @deprecated Use device-scoped `fetchDeviceExportMeta` instead. Proxies to the newest device export. */
 export async function fetchProjectDatabaseMeta(
   serverUrl: string,
   options?: ResolveProjectDatabaseUrlOptions,
@@ -53,6 +56,7 @@ export async function fetchProjectDatabaseMeta(
   return (await response.json()) as ProjectDatabaseMeta;
 }
 
+/** @deprecated Use device-scoped `fetchDeviceExportDatabase` instead. Proxies to the newest device export. */
 export async function fetchProjectDatabase(
   serverUrl: string,
   options?: ResolveProjectDatabaseUrlOptions,
@@ -61,6 +65,7 @@ export async function fetchProjectDatabase(
   return fetchSnapshot(url);
 }
 
+/** @deprecated Use `fetchDeviceExports` instead. */
 export async function fetchProjectDatabases(
   serverUrl: string,
   options?: ResolveProjectDatabaseUrlOptions,

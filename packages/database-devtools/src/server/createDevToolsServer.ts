@@ -8,11 +8,13 @@ import {
   PROJECT_DATABASE_API_PATH,
   PROJECT_DATABASE_META_API_PATH,
   PROJECT_DATABASES_API_PATH,
+  PROJECT_DEVICE_EXPORTS_API_PATH,
   buildDevToolsHttpUrl,
   buildDevToolsWsUrl,
 } from '../types/protocol';
 import { SNAPSHOT_KIND_HEADER, SNAPSHOT_MIME_HEADER, SNAPSHOT_NAME_HEADER, SQLITE_SNAPSHOT_MIME_TYPE } from '../types/snapshot';
 import { logger } from '../utils/logger';
+import { attachWebUi } from './attachWebUi';
 import { attachWebSocket } from './attachWebSocket';
 import { ConnectionManager } from './connectionManager';
 import { createCorsMiddleware } from './cors';
@@ -31,6 +33,13 @@ export type DevToolsServerOptions = {
   port?: number;
   dataDir?: string;
   snapshotPersistence?: boolean;
+  webDistPath?: string;
+};
+
+export type DevToolsServerUrls = {
+  httpUrl: string;
+  wsUrl: string;
+  webUiEnabled: boolean;
 };
 
 export type DevToolsServer = {
@@ -46,6 +55,7 @@ export type DevToolsServer = {
   writeSessions: WriteSessionManager;
   refreshCoordinator: RefreshCoordinator;
   writeCoordinator: WriteCoordinator;
+  urls: DevToolsServerUrls;
   close: () => Promise<void>;
 };
 
@@ -142,6 +152,39 @@ export async function createDevToolsServer(
     response.json({ databases });
   });
 
+  app.get(PROJECT_DEVICE_EXPORTS_API_PATH, async (_request, response) => {
+    const devices = await snapshotFileStore.listDeviceExports();
+    response.json({ devices });
+  });
+
+  app.get(`${PROJECT_DEVICE_EXPORTS_API_PATH}/:deviceId/database/meta`, async (request, response) => {
+    const deviceId = decodeURIComponent(request.params.deviceId);
+    const meta = await snapshotFileStore.getDeviceDatabaseMeta(deviceId);
+    response.json(meta);
+  });
+
+  app.get(`${PROJECT_DEVICE_EXPORTS_API_PATH}/:deviceId/database`, async (request, response) => {
+    const deviceId = decodeURIComponent(request.params.deviceId);
+    const meta = await snapshotFileStore.getDeviceDatabaseMeta(deviceId);
+
+    if (!meta.exists) {
+      response.status(404).json({ ok: false, error: 'DEVICE_DATABASE_NOT_FOUND', deviceId });
+      return;
+    }
+
+    const bytes = await snapshotFileStore.readDeviceDatabase(deviceId);
+
+    if (!bytes) {
+      response.status(404).json({ ok: false, error: 'DEVICE_DATABASE_NOT_FOUND', deviceId });
+      return;
+    }
+
+    response
+      .status(200)
+      .set('Content-Type', meta.mimeType ?? SQLITE_SNAPSHOT_MIME_TYPE)
+      .send(bytes);
+  });
+
   app.get(PROJECT_DATABASE_API_PATH, async (_request, response) => {
     const meta = await snapshotFileStore.getActiveDatabaseMeta();
 
@@ -163,6 +206,10 @@ export async function createDevToolsServer(
       .send(bytes);
   });
 
+  if (options.webDistPath) {
+    attachWebUi(app, options.webDistPath);
+  }
+
   const httpServer = createServer(app);
   attachWebSocket(
     httpServer,
@@ -171,6 +218,7 @@ export async function createDevToolsServer(
     heartbeat,
     refreshCoordinator,
     writeCoordinator,
+    { snapshotFileStore },
   );
 
   const refreshTimeoutInterval = setInterval(() => {
@@ -178,16 +226,21 @@ export async function createDevToolsServer(
     writeCoordinator.checkTimeouts();
   }, 5_000);
 
+  if (snapshotFileStore.isEnabled()) {
+    await snapshotFileStore.listDeviceExports();
+  }
+
   await new Promise<void>((resolve, reject) => {
     httpServer.once('error', reject);
     httpServer.listen(port, host, () => resolve());
   });
 
   const displayHost = host === '0.0.0.0' ? 'localhost' : host;
-  const url = buildDevToolsHttpUrl(displayHost, port);
+  const httpUrl = buildDevToolsHttpUrl(displayHost, port);
   const wsUrl = buildDevToolsWsUrl(displayHost, port);
+  const webUiEnabled = Boolean(options.webDistPath);
 
-  logger.serverStarted(url, wsUrl);
+  logger.serverStarted(httpUrl, wsUrl, webUiEnabled);
 
   return {
     app,
@@ -202,6 +255,11 @@ export async function createDevToolsServer(
     writeSessions,
     refreshCoordinator,
     writeCoordinator,
+    urls: {
+      httpUrl,
+      wsUrl,
+      webUiEnabled,
+    },
     close: () =>
       new Promise((resolve, reject) => {
         clearInterval(refreshTimeoutInterval);

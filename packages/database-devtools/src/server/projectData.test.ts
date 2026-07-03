@@ -1,8 +1,13 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  DEVICE_EXPORT_FILE_NAME,
+  deviceDatabaseFileName,
+  deviceDatabaseRelativePath,
   deviceLatestRelativePath,
+  deviceStorageRelativePath,
   resolveDataDir,
+  resolveDeviceStorageKey,
   sanitizePathSegment,
   upsertManifestEntry,
 } from './projectData';
@@ -12,22 +17,35 @@ describe('projectData', () => {
     expect(sanitizePathSegment('device/with spaces')).toBe('device_with_spaces');
   });
 
-  it('builds device latest relative paths', () => {
+  it('builds per-device database paths', () => {
+    expect(deviceDatabaseRelativePath('abc-123')).toBe(
+      'databases/devices/abc-123/Database-abc-123.db',
+    );
+    expect(deviceDatabaseFileName('abc-123')).toBe('Database-abc-123.db');
     expect(deviceLatestRelativePath('abc-123')).toBe('databases/devices/abc-123/latest.db');
+  });
+
+  it('builds canonical storage paths from bundle id', () => {
+    expect(resolveDeviceStorageKey({ bundleId: 'host.exp.exponent', deviceId: 'device-1' })).toBe(
+      'host.exp.exponent',
+    );
+    expect(deviceStorageRelativePath('host.exp.exponent')).toBe(
+      `databases/devices/host.exp.exponent/${DEVICE_EXPORT_FILE_NAME}`,
+    );
   });
 
   it('resolves explicit data directories', () => {
     expect(resolveDataDir('/tmp/devtools')).toBe(path.resolve('/tmp/devtools'));
   });
 
-  it('upserts manifest entries and tracks active database', () => {
+  it('upserts manifest entries without tracking active.db', () => {
     const next = upsertManifestEntry(
       { version: 1, entries: [] },
       {
-        id: 'active',
-        label: 'active.db',
-        relativePath: 'databases/active.db',
-        source: 'active',
+        id: 'device:host.exp.exponent',
+        label: 'example.db',
+        relativePath: 'databases/devices/host.exp.exponent/database.db',
+        source: 'device',
         kind: 'sqlite',
         mimeType: 'application/x-sqlite3',
         size: 10,
@@ -35,7 +53,7 @@ describe('projectData', () => {
       },
     );
 
-    expect(next.activeDatabase).toBe('databases/active.db');
+    expect(next.activeDatabase).toBeUndefined();
     expect(next.entries).toHaveLength(1);
   });
 });

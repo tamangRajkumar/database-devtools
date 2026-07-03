@@ -22,23 +22,22 @@ export function OverviewPanel({
   onBrowseTables,
   onRunSql,
 }: OverviewPanelProps) {
-  const { selectedDevice, lastSnapshotAt, lastUpdatedAt } = useDevTools();
+  const { selectedDevice, lastSnapshotAt, lastUpdatedAt, hasDatabase } = useDevTools();
 
-  if (!selectedDevice) {
+  if (!selectedDevice && !hasDatabase) {
     return (
       <section className="panel panel--overview panel--overview-empty">
         <div className="overview-empty">
           <h2 className="overview-empty__title">No device connected</h2>
           <p className="overview-empty__text">
-            Run your mobile app with Database DevTools enabled, then start the hub on your machine.
+            Connect a mobile app and refresh once, or select a device with a saved export.
           </p>
           <ol className="overview-empty__steps">
             <li>
-              In <code className="mono">database-devtools</code>, run{' '}
-              <code className="mono">pnpm dev:cli</code>
+              Run <code className="mono">npx database-devtools</code> on your machine
             </li>
-            <li>Start the example app with <code className="mono">pnpm dev:example</code></li>
-            <li>Select the device in the toolbar above</li>
+            <li>Open your mobile app with <code className="mono">DatabaseDevTools</code> enabled</li>
+            <li>Refresh once to save <code className="mono">Database-{'{deviceId}'}.db</code></li>
           </ol>
         </div>
       </section>

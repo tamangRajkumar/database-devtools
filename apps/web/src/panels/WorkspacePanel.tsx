@@ -14,7 +14,7 @@ import { WorkspaceEmptyState } from '../components/workspace/WorkspaceEmptyState
 import { PanelLeftIcon } from '../components/icons/NavIcons';
 
 export function WorkspacePanel() {
-  const { selectedDevice, hasDatabase } = useDevTools();
+  const { hasDatabase } = useDevTools();
   const { sql, setSql, runQuery, formatActiveSql } = useSqlWorkspace();
   const {
     objectExplorerOpen,
@@ -53,14 +53,15 @@ export function WorkspacePanel() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [formatActiveSql, setShortcutsOpen]);
 
-  if (!selectedDevice) {
+  if (!hasDatabase) {
     return (
       <section className="panel panel--workspace panel--workspace-empty">
         <div className="workspace-empty workspace-empty--centered">
           <div>
-            <p className="workspace-empty__title">No device selected</p>
+            <p className="workspace-empty__title">No database loaded</p>
             <p className="workspace-empty__text">
-              Connect a mobile app with Database DevTools enabled, then select it in the toolbar.
+              Select a device with a saved export, or connect a mobile app and refresh once to
+              create an export file.
             </p>
           </div>
         </div>

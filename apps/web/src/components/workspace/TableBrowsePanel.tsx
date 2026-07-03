@@ -3,7 +3,6 @@ import { useExplorer } from '../../context/ExplorerContext';
 import { DataGrid } from '../explorer/DataGrid';
 import { ExplorerToolbar } from '../explorer/ExplorerToolbar';
 import { PaginationBar } from '../explorer/PaginationBar';
-import { RowDetailDrawer } from '../explorer/RowDetailDrawer';
 import { SchemaView } from '../explorer/SchemaView';
 import { RefreshButton } from '../RefreshButton';
 
@@ -36,7 +35,6 @@ export function TableBrowsePanel() {
         {view === 'data' ? <DataGrid /> : <SchemaView />}
       </div>
       {view === 'data' && <PaginationBar />}
-      <RowDetailDrawer />
     </div>
   );
 }

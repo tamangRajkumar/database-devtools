@@ -28,7 +28,7 @@ export function OverviewDatabaseCard({
   onRunSql,
   onBrowseTables,
 }: OverviewDatabaseCardProps) {
-  const { hasDatabase, tables, snapshotMeta } = useDevTools();
+  const { hasDatabase, tables, snapshotMeta, isOfflineDatabase, isDeviceLive } = useDevTools();
 
   if (!hasDatabase || !snapshotMeta) {
     return (
@@ -41,6 +41,12 @@ export function OverviewDatabaseCard({
       </article>
     );
   }
+
+  const sourceLabel = isDeviceLive
+    ? 'Live device'
+    : isOfflineDatabase
+      ? 'Offline export'
+      : 'Snapshot';
 
   return (
     <article className="overview-card">
@@ -64,6 +70,10 @@ export function OverviewDatabaseCard({
           <dd title={formatTimestamp(snapshotMeta.exportedAt)}>
             {formatRelativeTime(snapshotMeta.exportedAt)}
           </dd>
+        </div>
+        <div className="overview-stats__row">
+          <dt>Source</dt>
+          <dd>{sourceLabel}</dd>
         </div>
         <div className="overview-stats__row">
           <dt>Dialect</dt>

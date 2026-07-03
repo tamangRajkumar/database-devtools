@@ -29,10 +29,22 @@ describe('resolveDeviceLabel', () => {
     });
   });
 
+  it('falls back to export metadata when device is offline', () => {
+    expect(
+      resolveDeviceLabel('device-missing', null, {
+        databaseName: 'devtools-example.db',
+        label: 'Example export',
+      }),
+    ).toEqual({
+      deviceId: 'device-missing',
+      deviceName: 'devtools-example.db',
+    });
+  });
+
   it('falls back when device is unknown', () => {
     expect(resolveDeviceLabel('device-missing', null)).toEqual({
       deviceId: 'device-missing',
-      deviceName: 'Unknown device',
+      deviceName: 'Device export',
     });
   });
 });

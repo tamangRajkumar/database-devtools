@@ -30,7 +30,7 @@ type OnboardingContextValue = {
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const { connectionState, selectedDeviceId, hasDatabase } = useDevTools();
+  const { connectionState, hasDatabase } = useDevTools();
   const [dismissed, setDismissed] = useState(isOnboardingDismissed);
   const [queryRun, setQueryRun] = useState(hasRunFirstQuery);
 
@@ -43,12 +43,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       },
       {
         id: 'device',
-        label: 'Select a mobile device',
-        done: Boolean(selectedDeviceId),
-      },
-      {
-        id: 'refresh',
-        label: 'Refresh the database snapshot',
+        label: 'Load a device database export',
         done: hasDatabase,
       },
       {
@@ -57,7 +52,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         done: queryRun,
       },
     ],
-    [connectionState, selectedDeviceId, hasDatabase, queryRun],
+    [connectionState, hasDatabase, queryRun],
   );
 
   const allDone = steps.every((step) => step.done);

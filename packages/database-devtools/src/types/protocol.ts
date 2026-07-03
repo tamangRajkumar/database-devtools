@@ -350,6 +350,8 @@ export const PROJECT_DATABASE_META_API_PATH = '/api/project/database/meta';
 
 export const PROJECT_DATABASES_API_PATH = '/api/project/databases';
 
+export const PROJECT_DEVICE_EXPORTS_API_PATH = '/api/project/devices';
+
 /** @deprecated Use DEVICE_SNAPSHOT_API_PATH */
 export const SNAPSHOT_API_PATH = DEVICE_SNAPSHOT_API_PATH;
 

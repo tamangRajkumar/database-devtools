@@ -10,14 +10,21 @@ import {
 } from 'react';
 import {
   createDevToolsClient,
-  fetchProjectDatabase,
-  fetchProjectDatabaseMeta,
+  fetchDeviceExportDatabase,
+  fetchDeviceExportMeta,
+  fetchDeviceExports,
   fetchSnapshot,
   formatRefreshErrorMessage,
+  formatSnapshotReceivedMessage,
+  resolveDeviceLabel,
+  resolveDeviceDisplayName,
+  resolveLiveSwitchTarget,
+  resolvePreferredDeviceId,
   resolveSnapshotDownloadUrl,
   type ConnectionState,
   type DevToolsClient,
-  type ProjectDatabaseMeta,
+  type DeviceExportMeta,
+  type ListedDeviceExport,
   type TransactionState,
 } from 'database-devtools/client';
 import { createInspectorForSnapshot, type DatabaseInspector } from 'database-devtools/inspector';
@@ -29,18 +36,13 @@ import {
   type SnapshotReadyMessage,
 } from 'database-devtools/protocol';
 import type { QueryResult, SchemaTable, TableInfo, TablePageRequest, TablePageResult, WriteOperation } from 'database-devtools';
+import { resolveBrowserApiOptions, resolveBrowserHubWsUrl } from '../lib/browserHub';
 import { validateReadOnlySql } from '../lib/sqlSafety';
-import {
-  formatSnapshotReceivedMessage,
-  resolveDeviceLabel,
-} from 'database-devtools/client';
 import { useToast } from './ToastContext';
 
 export type UiRefreshState = 'idle' | 'refreshing' | 'ready' | 'error';
 
-export type DatabaseSource = 'project' | 'device' | null;
-
-export type ProjectLoadState = 'idle' | 'loading';
+export type DatabaseSource = 'export' | 'live' | null;
 
 export type SnapshotMeta = {
   deviceId: string;
@@ -49,6 +51,7 @@ export type SnapshotMeta = {
   kind: string;
   mimeType: string;
   databaseName?: string;
+  relativePath?: string;
 };
 
 type DevToolsContextValue = {
@@ -57,6 +60,7 @@ type DevToolsContextValue = {
   selectedDeviceId: string | null;
   setSelectedDeviceId: (id: string | null) => void;
   selectedDevice: MobileDeviceInfo | null;
+  deviceExports: ListedDeviceExport[];
   lastUpdatedAt: number | null;
   refreshState: UiRefreshState;
   syncState: RefreshState | null;
@@ -65,12 +69,16 @@ type DevToolsContextValue = {
   refreshError: string | null;
   refresh: () => void;
   databaseSource: DatabaseSource;
-  projectDatabaseAvailable: boolean;
-  projectLoadState: ProjectLoadState;
-  projectLoadError: string | null;
-  loadProjectDatabase: () => Promise<boolean>;
-  reloadProjectDatabase: () => Promise<boolean>;
   hasDatabase: boolean;
+  isOfflineDatabase: boolean;
+  isDeviceLive: boolean;
+  liveMobileCount: number;
+  hasLiveMobileAvailable: boolean;
+  liveSwitchTargetId: string | null;
+  switchToConnectedDevice: () => void;
+  deviceDisplayName: string;
+  canRefreshFromDevice: boolean;
+  databaseSessionId: string;
   tables: TableInfo[];
   schema: SchemaTable[];
   executeQuery: (sql: string) => QueryResult;
@@ -86,10 +94,26 @@ type DevToolsContextValue = {
 
 const DevToolsContext = createContext<DevToolsContextValue | null>(null);
 
+function buildOfflineDevice(
+  deviceId: string,
+  exportEntry: ListedDeviceExport,
+): MobileDeviceInfo {
+  return {
+    deviceId,
+    connectionId: 'offline',
+    connectedAt: exportEntry.updatedAt,
+    metadata: {
+      appName: exportEntry.databaseName ?? exportEntry.label,
+      platform: 'offline',
+    },
+  };
+}
+
 export function DevToolsProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatusPayload | null>(null);
+  const [deviceExports, setDeviceExports] = useState<ListedDeviceExport[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [refreshState, setRefreshState] = useState<UiRefreshState>('idle');
@@ -102,16 +126,15 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [databaseLoaded, setDatabaseLoaded] = useState(false);
   const [databaseSource, setDatabaseSource] = useState<DatabaseSource>(null);
-  const [projectDatabaseAvailable, setProjectDatabaseAvailable] = useState(false);
-  const [projectLoadState, setProjectLoadState] = useState<ProjectLoadState>('idle');
-  const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
   const [transactionState, setTransactionState] = useState<TransactionState>('idle');
 
   const clientRef = useRef<DevToolsClient | null>(null);
   const activeRefreshDeviceIdRef = useRef<string | null>(null);
+  const exportLoadInFlightRef = useRef(false);
   const selectedDeviceIdRef = useRef<string | null>(null);
   const deviceStatusRef = useRef<DeviceStatusPayload | null>(null);
   const inspectorRef = useRef<DatabaseInspector | null>(null);
+  const loadedDeviceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     selectedDeviceIdRef.current = selectedDeviceId;
@@ -128,22 +151,99 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setSchema([]);
     setDatabaseLoaded(false);
     setDatabaseSource(null);
+    loadedDeviceIdRef.current = null;
   }, []);
 
   const openSnapshot = useCallback(async (bytes: ArrayBuffer, kind: string, mimeType: string) => {
-    closeSession();
-
     const inspector = await createInspectorForSnapshot({
       kind,
       mimeType,
       bytes,
     });
 
+    inspectorRef.current?.close();
     inspectorRef.current = inspector;
     setTables(inspector.listTables());
     setSchema(inspector.getSchema());
     setDatabaseLoaded(true);
-  }, [closeSession]);
+  }, []);
+
+  const applyDeviceExport = useCallback(
+    async (
+      deviceId: string,
+      meta: DeviceExportMeta,
+      bytes: ArrayBuffer,
+      options?: { silent?: boolean },
+    ) => {
+      await openSnapshot(bytes, meta.kind ?? 'sqlite', meta.mimeType ?? 'application/x-sqlite3');
+
+      setSnapshotMeta({
+        deviceId,
+        size: meta.size ?? bytes.byteLength,
+        exportedAt: meta.updatedAt ?? Date.now(),
+        kind: meta.kind ?? 'sqlite',
+        mimeType: meta.mimeType ?? 'application/x-sqlite3',
+        databaseName: meta.databaseName,
+        relativePath: meta.relativePath,
+      });
+      setDatabaseSource('export');
+      loadedDeviceIdRef.current = deviceId;
+      setLastSnapshotAt(meta.updatedAt ?? Date.now());
+      setRefreshState('ready');
+      setRefreshError(null);
+      setQueryError(null);
+
+      if (!options?.silent) {
+        const deviceLabel = resolveDeviceLabel(deviceId, deviceStatusRef.current, {
+          databaseName: meta.databaseName,
+        });
+        showToast({
+          title: 'Device export loaded',
+          message: formatSnapshotReceivedMessage(
+            deviceLabel,
+            meta.databaseName ?? meta.kind ?? 'sqlite',
+          ),
+          variant: 'success',
+        });
+      }
+    },
+    [openSnapshot, showToast],
+  );
+
+  const loadDeviceExport = useCallback(
+    async (deviceId: string, options?: { silent?: boolean }): Promise<boolean> => {
+      const client = clientRef.current;
+
+      if (!client || connectionState !== 'connected') {
+        return false;
+      }
+
+      if (exportLoadInFlightRef.current) {
+        return false;
+      }
+
+      exportLoadInFlightRef.current = true;
+
+      const apiOptions = resolveBrowserApiOptions();
+
+      try {
+        const meta = await fetchDeviceExportMeta(client.getServerUrl(), deviceId, apiOptions);
+
+        if (!meta.exists) {
+          return false;
+        }
+
+        const bytes = await fetchDeviceExportDatabase(client.getServerUrl(), deviceId, apiOptions);
+        await applyDeviceExport(deviceId, meta, bytes, options);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        exportLoadInFlightRef.current = false;
+      }
+    },
+    [applyDeviceExport, connectionState],
+  );
 
   const handleSnapshotReady = useCallback(async (message: SnapshotReadyMessage) => {
     const activeRefreshDeviceId = activeRefreshDeviceIdRef.current;
@@ -162,7 +262,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     }
 
     const downloadUrl = resolveSnapshotDownloadUrl(client.getServerUrl(), message.deviceId, {
-      useSameOriginApi: import.meta.env.DEV,
+      ...resolveBrowserApiOptions(),
     });
 
     let bytes: ArrayBuffer;
@@ -199,7 +299,8 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       mimeType: message.mimeType,
       databaseName: message.databaseName,
     });
-    setDatabaseSource('device');
+    setDatabaseSource('live');
+    loadedDeviceIdRef.current = message.deviceId;
     setLastSnapshotAt(message.exportedAt);
     setRefreshState('ready');
     setSyncState('ready');
@@ -208,7 +309,9 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     activeRefreshDeviceIdRef.current = null;
 
     const databaseName = message.databaseName ?? message.kind;
-    const deviceLabel = resolveDeviceLabel(message.deviceId, deviceStatusRef.current);
+    const deviceLabel = resolveDeviceLabel(message.deviceId, deviceStatusRef.current, {
+      databaseName,
+    });
     const initiator = pushedFromDevice ? 'mobile' : 'browser';
 
     showToast({
@@ -216,120 +319,16 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       message: formatSnapshotReceivedMessage(deviceLabel, databaseName),
       variant: 'success',
     });
+
+    void fetchDeviceExports(client.getServerUrl(), resolveBrowserApiOptions())
+      .then(setDeviceExports)
+      .catch(() => undefined);
   }, [openSnapshot, showToast]);
-
-  const applyProjectDatabase = useCallback(
-    async (meta: ProjectDatabaseMeta, bytes: ArrayBuffer, options?: { reload?: boolean }) => {
-      await openSnapshot(bytes, meta.kind ?? 'sqlite', meta.mimeType ?? 'application/x-sqlite3');
-
-      setSnapshotMeta({
-        deviceId: meta.deviceId ?? 'project',
-        size: meta.size ?? bytes.byteLength,
-        exportedAt: meta.updatedAt ?? Date.now(),
-        kind: meta.kind ?? 'sqlite',
-        mimeType: meta.mimeType ?? 'application/x-sqlite3',
-        databaseName: meta.databaseName,
-      });
-      setDatabaseSource('project');
-      setLastSnapshotAt(meta.updatedAt ?? Date.now());
-      setRefreshState('ready');
-      setRefreshError(null);
-      setProjectLoadError(null);
-      setQueryError(null);
-
-      showToast({
-        title: options?.reload ? 'Project database reloaded' : 'Project database loaded',
-        message: meta.databaseName ?? meta.relativePath ?? 'active.db',
-        variant: 'success',
-      });
-    },
-    [openSnapshot, showToast],
-  );
-
-  const loadProjectDatabase = useCallback(
-    async (options?: { silent?: boolean; reload?: boolean }): Promise<boolean> => {
-      const client = clientRef.current;
-
-      if (!client || connectionState !== 'connected') {
-        if (!options?.silent) {
-          setProjectLoadError('Not connected to the DevTools hub');
-        }
-
-        return false;
-      }
-
-      if (projectLoadState === 'loading') {
-        return false;
-      }
-
-      setProjectLoadState('loading');
-
-      if (!options?.silent) {
-        setProjectLoadError(null);
-      }
-
-      const apiOptions = { useSameOriginApi: import.meta.env.DEV };
-
-      try {
-        const meta = await fetchProjectDatabaseMeta(client.getServerUrl(), apiOptions);
-
-        if (!meta.exists) {
-          setProjectDatabaseAvailable(false);
-
-          if (!options?.silent) {
-            setProjectLoadError('No project database found at .devtools/databases/active.db');
-          }
-
-          return false;
-        }
-
-        setProjectDatabaseAvailable(true);
-
-        const bytes = await fetchProjectDatabase(client.getServerUrl(), apiOptions);
-
-        if (!options?.silent) {
-          await applyProjectDatabase(meta, bytes, { reload: options?.reload });
-        } else {
-          await openSnapshot(bytes, meta.kind ?? 'sqlite', meta.mimeType ?? 'application/x-sqlite3');
-          setSnapshotMeta({
-            deviceId: meta.deviceId ?? 'project',
-            size: meta.size ?? bytes.byteLength,
-            exportedAt: meta.updatedAt ?? Date.now(),
-            kind: meta.kind ?? 'sqlite',
-            mimeType: meta.mimeType ?? 'application/x-sqlite3',
-            databaseName: meta.databaseName,
-          });
-          setDatabaseSource('project');
-          setLastSnapshotAt(meta.updatedAt ?? Date.now());
-          setRefreshState('ready');
-          setRefreshError(null);
-          setQueryError(null);
-        }
-
-        return true;
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to load project database';
-
-        if (!options?.silent) {
-          setProjectLoadError(message);
-        }
-
-        return false;
-      } finally {
-        setProjectLoadState('idle');
-      }
-    },
-    [applyProjectDatabase, connectionState, openSnapshot, projectLoadState],
-  );
-
-  const reloadProjectDatabase = useCallback(async (): Promise<boolean> => {
-    return loadProjectDatabase({ reload: true });
-  }, [loadProjectDatabase]);
 
   useEffect(() => {
     const client = createDevToolsClient({
       role: DevToolsRole.BROWSER,
+      serverUrl: resolveBrowserHubWsUrl(),
       onConnectionStateChange: setConnectionState,
       onDeviceStatus: (status) => {
         setDeviceStatus(status);
@@ -345,19 +344,13 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       onSnapshotReady: handleSnapshotReady,
       onRefreshError: (message) => {
         const activeRefreshDeviceId = activeRefreshDeviceIdRef.current;
-        const selectedDeviceId = selectedDeviceIdRef.current;
+        const currentSelectedDeviceId = selectedDeviceIdRef.current;
 
-        if (
-          activeRefreshDeviceId &&
-          message.deviceId !== activeRefreshDeviceId
-        ) {
+        if (activeRefreshDeviceId && message.deviceId !== activeRefreshDeviceId) {
           return;
         }
 
-        if (
-          !activeRefreshDeviceId &&
-          message.deviceId !== selectedDeviceId
-        ) {
+        if (!activeRefreshDeviceId && message.deviceId !== currentSelectedDeviceId) {
           return;
         }
 
@@ -380,30 +373,8 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   }, [handleSnapshotReady, closeSession]);
 
   useEffect(() => {
-    const mobiles = deviceStatus?.mobiles ?? [];
-
-    if (mobiles.length === 0) {
-      setSelectedDeviceId(null);
-
-      if (databaseSource !== 'project') {
-        closeSession();
-        setSnapshotMeta(null);
-        setRefreshState('idle');
-      }
-
-      return;
-    }
-
-    const stillConnected = mobiles.some((device) => device.deviceId === selectedDeviceId);
-
-    if (!selectedDeviceId || !stillConnected) {
-      setSelectedDeviceId(mobiles[0]?.deviceId ?? null);
-    }
-  }, [deviceStatus, selectedDeviceId, closeSession, databaseSource]);
-
-  useEffect(() => {
     if (connectionState !== 'connected') {
-      setProjectDatabaseAvailable(false);
+      setDeviceExports([]);
       return;
     }
 
@@ -413,41 +384,129 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void fetchProjectDatabaseMeta(client.getServerUrl(), {
-      useSameOriginApi: import.meta.env.DEV,
-    })
-      .then((meta) => {
-        setProjectDatabaseAvailable(meta.exists);
-      })
-      .catch(() => {
-        setProjectDatabaseAvailable(false);
-      });
+    void fetchDeviceExports(client.getServerUrl(), resolveBrowserApiOptions())
+      .then(setDeviceExports)
+      .catch(() => setDeviceExports([]));
   }, [connectionState]);
 
   useEffect(() => {
-    if (connectionState !== 'connected' || databaseLoaded) {
+    const mobiles = deviceStatus?.mobiles ?? [];
+    const exports = deviceExports
+      .filter((entry): entry is typeof entry & { deviceId: string } => Boolean(entry.deviceId))
+      .map((entry) => ({
+        deviceId: entry.deviceId,
+        bundleId: entry.bundleId,
+      }));
+
+    const nextDeviceId = resolvePreferredDeviceId({
+      selectedDeviceId,
+      mobiles,
+      exports,
+    });
+
+    if (nextDeviceId !== selectedDeviceId) {
+      setSelectedDeviceId(nextDeviceId);
+    }
+  }, [deviceStatus, deviceExports, selectedDeviceId]);
+
+  useEffect(() => {
+    if (connectionState !== 'connected' || !selectedDeviceId) {
       return;
     }
 
-    void loadProjectDatabase({ silent: true });
-  }, [connectionState, databaseLoaded, loadProjectDatabase]);
+    if (databaseLoaded && loadedDeviceIdRef.current === selectedDeviceId) {
+      return;
+    }
+
+    void loadDeviceExport(selectedDeviceId, { silent: true });
+  }, [connectionState, selectedDeviceId, databaseLoaded, loadDeviceExport]);
 
   const selectedDevice = useMemo(() => {
-    if (!selectedDeviceId || !deviceStatus) {
+    if (!selectedDeviceId) {
       return null;
     }
 
-    return deviceStatus.mobiles.find((device) => device.deviceId === selectedDeviceId) ?? null;
+    const liveDevice = deviceStatus?.mobiles.find((device) => device.deviceId === selectedDeviceId);
+
+    if (liveDevice) {
+      return liveDevice;
+    }
+
+    const exportEntry = deviceExports.find((entry) => entry.deviceId === selectedDeviceId);
+
+    if (exportEntry) {
+      return buildOfflineDevice(selectedDeviceId, exportEntry);
+    }
+
+    return null;
+  }, [deviceStatus, deviceExports, selectedDeviceId]);
+
+  const isDeviceLive = useMemo(() => {
+    if (!selectedDeviceId) {
+      return false;
+    }
+
+    return deviceStatus?.mobiles.some((device) => device.deviceId === selectedDeviceId) ?? false;
   }, [deviceStatus, selectedDeviceId]);
+
+  const liveMobileCount = deviceStatus?.mobileCount ?? 0;
+
+  const hasLiveMobileAvailable = useMemo(() => {
+    return liveMobileCount > 0 && !isDeviceLive;
+  }, [liveMobileCount, isDeviceLive]);
+
+  const liveSwitchTargetId = useMemo(() => {
+    return resolveLiveSwitchTarget({
+      selectedDeviceId,
+      mobiles: deviceStatus?.mobiles ?? [],
+      exports: deviceExports
+        .filter((entry): entry is typeof entry & { deviceId: string } => Boolean(entry.deviceId))
+        .map((entry) => ({
+          deviceId: entry.deviceId,
+          bundleId: entry.bundleId,
+        })),
+    });
+  }, [deviceStatus, deviceExports, selectedDeviceId]);
+
+  const switchToConnectedDevice = useCallback(() => {
+    if (liveSwitchTargetId) {
+      setSelectedDeviceId(liveSwitchTargetId);
+    }
+  }, [liveSwitchTargetId]);
+
+  const isOfflineDatabase = useMemo(() => {
+    return Boolean(databaseLoaded && !isDeviceLive);
+  }, [databaseLoaded, isDeviceLive]);
+
+  const deviceDisplayName = useMemo(() => {
+    if (!selectedDeviceId) {
+      return 'No device';
+    }
+
+    if (selectedDevice?.metadata?.appName) {
+      return selectedDevice.metadata.appName;
+    }
+
+    return resolveDeviceDisplayName(selectedDeviceId, deviceStatus, {
+      databaseName: snapshotMeta?.databaseName,
+      label: deviceExports.find((entry) => entry.deviceId === selectedDeviceId)?.label,
+    });
+  }, [deviceExports, deviceStatus, selectedDevice, selectedDeviceId, snapshotMeta?.databaseName]);
+
+  const canRefreshFromDevice = useMemo(() => {
+    return connectionState === 'connected' && isDeviceLive;
+  }, [connectionState, isDeviceLive]);
+
+  const databaseSessionId = selectedDeviceId ?? 'offline';
 
   const refresh = useCallback(() => {
     if (!selectedDeviceId || refreshState === 'refreshing') {
       return;
     }
 
-    if (connectionState !== 'connected') {
+    if (!canRefreshFromDevice) {
       setRefreshState('error');
-      setRefreshError('Not connected to the DevTools hub');
+      setRefreshError('Connect the device to refresh live data');
       return;
     }
 
@@ -463,13 +522,13 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     setSyncState('requested');
     setRefreshError(null);
     setQueryError(null);
-  }, [selectedDeviceId, refreshState, connectionState]);
+  }, [selectedDeviceId, refreshState, canRefreshFromDevice]);
 
   const executeQuery = useCallback((sql: string): QueryResult => {
     const inspector = inspectorRef.current;
 
     if (!inspector) {
-      throw new Error('No database loaded. Refresh from a device or load from the project folder.');
+      throw new Error('No database loaded. Select a device with an export or refresh from a connected device.');
     }
 
     try {
@@ -487,7 +546,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     const inspector = inspectorRef.current;
 
     if (!inspector) {
-      throw new Error('No database loaded. Refresh from a device or load from the project folder.');
+      throw new Error('No database loaded. Select a device with an export or refresh from a connected device.');
     }
 
     return inspector.fetchTablePage(request);
@@ -498,8 +557,8 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const beginWriteTransaction = useCallback(async () => {
-    if (!selectedDeviceId) {
-      throw new Error('No device selected');
+    if (!selectedDeviceId || isOfflineDatabase) {
+      throw new Error('No live device selected');
     }
 
     const client = clientRef.current;
@@ -509,7 +568,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
     }
 
     await client.beginTransaction(selectedDeviceId);
-  }, [selectedDeviceId]);
+  }, [selectedDeviceId, isOfflineDatabase]);
 
   const commitWriteTransaction = useCallback(async () => {
     const client = clientRef.current;
@@ -548,6 +607,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       selectedDeviceId,
       setSelectedDeviceId,
       selectedDevice,
+      deviceExports,
       lastUpdatedAt,
       refreshState,
       syncState,
@@ -556,12 +616,16 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       refreshError,
       refresh,
       databaseSource,
-      projectDatabaseAvailable,
-      projectLoadState,
-      projectLoadError,
-      loadProjectDatabase,
-      reloadProjectDatabase,
       hasDatabase: databaseLoaded,
+      isOfflineDatabase,
+      isDeviceLive,
+      liveMobileCount,
+      hasLiveMobileAvailable,
+      liveSwitchTargetId,
+      switchToConnectedDevice,
+      deviceDisplayName,
+      canRefreshFromDevice,
+      databaseSessionId,
       tables,
       schema,
       executeQuery,
@@ -579,6 +643,7 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       deviceStatus,
       selectedDeviceId,
       selectedDevice,
+      deviceExports,
       lastUpdatedAt,
       refreshState,
       syncState,
@@ -587,12 +652,16 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       refreshError,
       refresh,
       databaseSource,
-      projectDatabaseAvailable,
-      projectLoadState,
-      projectLoadError,
-      loadProjectDatabase,
-      reloadProjectDatabase,
       databaseLoaded,
+      isOfflineDatabase,
+      isDeviceLive,
+      liveMobileCount,
+      hasLiveMobileAvailable,
+      liveSwitchTargetId,
+      switchToConnectedDevice,
+      deviceDisplayName,
+      canRefreshFromDevice,
+      databaseSessionId,
       tables,
       schema,
       executeQuery,

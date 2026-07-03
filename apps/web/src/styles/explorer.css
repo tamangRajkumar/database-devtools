@@ -237,7 +237,7 @@
 }
 
 .data-grid__row {
-  cursor: pointer;
+  cursor: default;
 }
 
 .data-grid__row:hover td {

@@ -2,29 +2,31 @@
   "version": 1,
   "entries": [
     {
-      "id": "device:device-1783018897335-ki8uvlr1",
+      "id": "device:device-1783075991316-dflg9rwf",
       "label": "/data/data/host.exp.exponent/files/SQLite/devtools-example.db",
-      "relativePath": "databases/devices/device-1783018897335-ki8uvlr1/latest.db",
+      "relativePath": "databases/devices/device-1783075991316-dflg9rwf/database.db",
       "source": "device",
-      "deviceId": "device-1783018897335-ki8uvlr1",
+      "deviceId": "device-1783075991316-dflg9rwf",
+      "storageKey": "device-1783075991316-dflg9rwf",
       "kind": "sqlite",
       "mimeType": "application/x-sqlite3",
       "databaseName": "/data/data/host.exp.exponent/files/SQLite/devtools-example.db",
       "size": 20480,
-      "updatedAt": 1783019052642
+      "updatedAt": 1783078644491
     },
     {
-      "id": "active",
+      "id": "device:host.exp.exponent",
       "label": "/data/data/host.exp.exponent/files/SQLite/devtools-example.db",
-      "relativePath": "databases/active.db",
-      "source": "active",
-      "deviceId": "device-1783018897335-ki8uvlr1",
+      "relativePath": "databases/devices/host.exp.exponent/database.db",
+      "source": "device",
+      "deviceId": "device-1783075991316-dflg9rwf",
+      "bundleId": "host.exp.exponent",
+      "storageKey": "host.exp.exponent",
       "kind": "sqlite",
       "mimeType": "application/x-sqlite3",
       "databaseName": "/data/data/host.exp.exponent/files/SQLite/devtools-example.db",
       "size": 20480,
-      "updatedAt": 1783019052642
+      "updatedAt": 1783077259714
     }
-  ],
-  "activeDatabase": "databases/active.db"
+  ]
 }

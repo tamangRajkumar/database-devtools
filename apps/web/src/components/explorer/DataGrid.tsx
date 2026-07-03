@@ -1,4 +1,4 @@
-import { useExplorer, type ExplorerRow } from '../../context/ExplorerContext';
+import { useExplorer } from '../../context/ExplorerContext';
 
 type SortableColumnHeaderProps = {
   column: string;
@@ -21,7 +21,7 @@ export function SortableColumnHeader({ column }: SortableColumnHeaderProps) {
 }
 
 export function DataGrid() {
-  const { tablePage, setSelectedRow, page, pageSize } = useExplorer();
+  const { tablePage } = useExplorer();
 
   if (!tablePage) {
     return (
@@ -47,21 +47,6 @@ export function DataGrid() {
     );
   }
 
-  const handleRowClick = (row: (string | number | null)[], index: number) => {
-    const values: Record<string, string | number | null> = {};
-
-    tablePage.columns.forEach((column, columnIndex) => {
-      values[column] = row[columnIndex] ?? null;
-    });
-
-    const explorerRow: ExplorerRow = {
-      index: (page - 1) * pageSize + index,
-      values,
-    };
-
-    setSelectedRow(explorerRow);
-  };
-
   return (
     <div className="data-table-wrapper data-grid">
       <table className="data-table">
@@ -76,11 +61,7 @@ export function DataGrid() {
         </thead>
         <tbody>
           {tablePage.rows.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className="data-grid__row"
-              onClick={() => handleRowClick(row, rowIndex)}
-            >
+            <tr key={rowIndex} className="data-grid__row">
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex}>{cell === null ? <span className="data-grid__null">NULL</span> : String(cell)}</td>
               ))}

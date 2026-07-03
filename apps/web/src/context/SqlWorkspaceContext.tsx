@@ -90,13 +90,13 @@ function markDirty(tab: QueryTab, sql: string, originalSql: string): QueryTab {
 }
 
 export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
-  const { selectedDeviceId, hasDatabase, executeQuery, clearQueryError } = useDevTools();
+  const { databaseSessionId, hasDatabase, executeQuery, clearQueryError } = useDevTools();
   const { clearTableSelection } = useExplorer();
   const { setBottomPanelTab, markOutputUnread } = useWorkspace();
   const { showToast } = useToast();
   const { markQueryRun } = useOnboarding();
 
-  const initialTabsRef = useRef(loadQueryTabs(selectedDeviceId));
+  const initialTabsRef = useRef(loadQueryTabs(databaseSessionId));
   const [tabs, setTabs] = useState<QueryTab[]>(() =>
     initialTabsRef.current.tabs.map((tab) => toQueryTab(tab)),
   );
@@ -127,7 +127,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
   const sql = activeTab?.sql ?? '';
 
   useEffect(() => {
-    const loaded = loadQueryTabs(selectedDeviceId);
+    const loaded = loadQueryTabs(databaseSessionId);
     setTabs(loaded.tabs.map((tab) => toQueryTab(tab)));
     setActiveTabId(loaded.activeTabId);
     const map: Record<string, string> = {};
@@ -139,7 +139,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
     setError(null);
     setExecutionMeta(null);
     setLastMessage(null);
-  }, [selectedDeviceId]);
+  }, [databaseSessionId]);
 
   useEffect(() => {
     if (tabs.length === 0) {
@@ -147,16 +147,16 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
     }
 
     saveQueryTabs(
-      selectedDeviceId,
+      databaseSessionId,
       tabs.map(({ id, title, sql: tabSql }) => ({ id, title, sql: tabSql })),
       activeTabId,
     );
-  }, [tabs, activeTabId, selectedDeviceId]);
+  }, [tabs, activeTabId, databaseSessionId]);
 
   useEffect(() => {
-    setHistory(loadHistory(selectedDeviceId));
-    setFavorites(loadFavorites(selectedDeviceId));
-  }, [selectedDeviceId]);
+    setHistory(loadHistory(databaseSessionId));
+    setFavorites(loadFavorites(databaseSessionId));
+  }, [databaseSessionId]);
 
   const updateActiveTabSql = useCallback(
     (nextSql: string) => {
@@ -265,7 +265,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
           `Query executed successfully. ${queryResult.rowCount} row${queryResult.rowCount === 1 ? '' : 's'} returned in ${queryResult.durationMs.toFixed(1)} ms.`,
         );
         const entry = createHistoryEntry(queryText, queryResult);
-        setHistory(appendHistory(selectedDeviceId, entry));
+        setHistory(appendHistory(databaseSessionId, entry));
         setBottomPanelTab('results');
         markQueryRun();
       } catch (runError) {
@@ -275,7 +275,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         setExecutionMeta(null);
         setLastMessage(message);
         const entry = createHistoryEntry(queryText, undefined, message);
-        setHistory(appendHistory(selectedDeviceId, entry));
+        setHistory(appendHistory(databaseSessionId, entry));
         setBottomPanelTab('output');
         markOutputUnread();
         showToast({
@@ -293,7 +293,7 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
       sql,
       executeQuery,
       clearQueryError,
-      selectedDeviceId,
+      databaseSessionId,
       setBottomPanelTab,
       markOutputUnread,
       markQueryRun,
@@ -368,24 +368,24 @@ export function SqlWorkspaceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setFavorites(addFavorite(selectedDeviceId, createFavorite(trimmed, sql)));
+      setFavorites(addFavorite(databaseSessionId, createFavorite(trimmed, sql)));
       setSaveDialogOpen(false);
       setBottomPanelTab('history');
     },
-    [sql, selectedDeviceId, setBottomPanelTab],
+    [sql, databaseSessionId, setBottomPanelTab],
   );
 
   const deleteFavorite = useCallback(
     (id: string) => {
-      setFavorites(deleteStoredFavorite(selectedDeviceId, id));
+      setFavorites(deleteStoredFavorite(databaseSessionId, id));
     },
-    [selectedDeviceId],
+    [databaseSessionId],
   );
 
   const clearHistory = useCallback(() => {
-    clearStoredHistory(selectedDeviceId);
+    clearStoredHistory(databaseSessionId);
     setHistory([]);
-  }, [selectedDeviceId]);
+  }, [databaseSessionId]);
 
   const copyResults = useCallback(async () => {
     if (!result || result.columns.length === 0) {

@@ -5,6 +5,11 @@ export type DeviceLabel = {
   deviceName: string;
 };
 
+export type DeviceLabelFallback = {
+  databaseName?: string | null;
+  label?: string | null;
+};
+
 export function shortenDeviceId(deviceId: string, visibleChars = 4): string {
   if (deviceId.length <= visibleChars * 2 + 1) {
     return deviceId;
@@ -13,15 +18,36 @@ export function shortenDeviceId(deviceId: string, visibleChars = 4): string {
   return `${deviceId.slice(0, visibleChars)}…${deviceId.slice(-visibleChars)}`;
 }
 
+export function resolveDeviceDisplayName(
+  deviceId: string,
+  deviceStatus: DeviceStatusPayload | null,
+  fallback?: DeviceLabelFallback | null,
+): string {
+  const mobile = deviceStatus?.mobiles.find((device) => device.deviceId === deviceId);
+
+  if (mobile?.metadata?.appName) {
+    return mobile.metadata.appName;
+  }
+
+  if (fallback?.databaseName) {
+    return fallback.databaseName;
+  }
+
+  if (fallback?.label) {
+    return fallback.label;
+  }
+
+  return 'Device export';
+}
+
 export function resolveDeviceLabel(
   deviceId: string,
   deviceStatus: DeviceStatusPayload | null,
+  fallback?: DeviceLabelFallback | null,
 ): DeviceLabel {
-  const mobile = deviceStatus?.mobiles.find((device) => device.deviceId === deviceId);
-
   return {
     deviceId,
-    deviceName: mobile?.metadata?.appName ?? 'Unknown device',
+    deviceName: resolveDeviceDisplayName(deviceId, deviceStatus, fallback),
   };
 }
 
@@ -39,8 +65,9 @@ export function buildSnapshotLoadedToast(
   deviceId: string,
   databaseName: string,
   deviceStatus: DeviceStatusPayload | null,
+  fallback?: DeviceLabelFallback | null,
 ): { title: string; message: string } {
-  const deviceLabel = resolveDeviceLabel(deviceId, deviceStatus);
+  const deviceLabel = resolveDeviceLabel(deviceId, deviceStatus, fallback);
 
   return {
     title: initiator === 'mobile' ? 'New database received' : 'Database refreshed',

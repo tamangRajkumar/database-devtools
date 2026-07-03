@@ -85,8 +85,8 @@ export function DevToolsSettingsModal() {
               ) : null}
               {connectionState === 'reconnecting' ? (
                 <Text style={styles.hintText}>
-                  Ensure the inspector hub is running (pnpm dev:cli) and the URL reaches your
-                  development machine — not the phone itself.
+                  Ensure the inspector hub is running (npx database-devtools) and the URL reaches
+                  your development machine — not the phone itself.
                 </Text>
               ) : null}
             </Section>

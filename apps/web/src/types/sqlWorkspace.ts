@@ -16,8 +16,6 @@ export type FavoriteQuery = {
 
 export type QuerySidebarTab = 'history' | 'favorites';
 
-export const DEFAULT_SQL = `SELECT name FROM sqlite_master
-WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-ORDER BY name`;
+export const DEFAULT_SQL = '';
 
 export const MAX_HISTORY_ENTRIES = 50;
