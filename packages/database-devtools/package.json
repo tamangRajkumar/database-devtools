@@ -1,6 +1,6 @@
 {
   "name": "database-devtools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Inspect SQLite in React Native & Expo from your browser — browse tables, run SQL, edit data. DevTools for mobile databases.",
   "license": "MIT",
   "author": "Rajkumar Tamang",
@@ -17,10 +17,10 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "react-native": "./src/native.ts",
+  "react-native": "./dist/native.js",
   "exports": {
     ".": {
-      "react-native": "./src/native.ts",
+      "react-native": "./dist/native.js",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
@@ -42,7 +42,7 @@
       "default": "./dist/types/protocol.js"
     },
     "./adapter": {
-      "react-native": "./src/adapter/index.ts",
+      "react-native": "./dist/adapter/index.js",
       "types": "./dist/adapter/index.d.ts",
       "import": "./dist/adapter/index.js",
       "require": "./dist/adapter/index.cjs",
@@ -59,7 +59,7 @@
       "default": "./dist/inspectors/sqlite/index.js"
     },
     "./adapters/sqlite": {
-      "react-native": "./src/adapters/sqlite/index.ts",
+      "react-native": "./dist/adapters/sqlite/index.js",
       "types": "./dist/adapters/sqlite/index.d.ts",
       "import": "./dist/adapters/sqlite/index.js",
       "require": "./dist/adapters/sqlite/index.cjs",

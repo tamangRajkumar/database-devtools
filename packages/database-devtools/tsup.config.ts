@@ -4,6 +4,7 @@ export default defineConfig([
   {
     entry: {
       index: 'src/index.ts',
+      native: 'src/native.ts',
       'client/index': 'src/client/index.ts',
       'server/index': 'src/server/index.ts',
       'types/protocol': 'src/types/protocol.ts',

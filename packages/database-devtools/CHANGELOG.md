@@ -1,5 +1,12 @@
 # database-devtools
 
+## 0.1.2
+
+### Fixed
+
+- React Native / Metro resolution: `react-native` export now points to built `dist/native.js` instead of unpublished `src/native.ts`
+- Added dedicated `native` build entry that excludes Node server dependencies (`express`, `ws`, `fs`)
+
 ## 0.1.1
 
 ### Added
