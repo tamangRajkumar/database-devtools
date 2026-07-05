@@ -5,25 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-07-05
 
 ### Added
 
-- Multi-database adapter registry with auto-detection (`resolveAdapter`)
-- Built-in SQLite adapter for expo-sqlite (no separate package required)
+- React Native DevTools overlay with built-in expo-sqlite adapter
+- CLI hub (`npx database-devtools`) with bundled browser UI
 - Browser SQLite inspector via `database-devtools/inspector-sqlite` subpath
-- Explorer, SQL Workspace, and live edit mode in browser UI
-- GitHub Actions CI, Vitest test suite, and Changesets release workflow
+- Explorer, SQL workspace, edit mode, and per-device export storage
+- Multi-database adapter registry, CI, and Changesets release workflow
 
-### Changed
-
-- Consolidated browser inspector into `database-devtools` — single `npm install database-devtools` for app developers
-
-## [0.1.0] - 2026-07-01
-
-### Added
-
-- Initial private preview: WebSocket hub, mobile overlay, browser UI, SQLite export/inspect
-
-[Unreleased]: https://github.com/yellowbooking/database-devtools/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/yellowbooking/database-devtools/releases/tag/v0.1.0

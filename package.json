@@ -13,7 +13,7 @@
     "clean": "pnpm -r exec node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && pnpm publish --filter database-devtools"
+    "release": "pnpm build && pnpm publish --filter database-devtools --no-git-checks"
   },
   "engines": {
     "node": ">=20",
