@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import { useDevTools } from '../../context/DevToolsContext';
 import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';
-import { useWorkspace } from '../../context/WorkspaceContext';
+// import { useWorkspace } from '../../context/WorkspaceContext';
 import { PlayIcon, HelpIcon } from '../icons/NavIcons';
 import type { SqlEditorHandle } from './SqlEditor';
 
@@ -12,7 +12,7 @@ type SqlToolbarProps = {
 export function SqlToolbar({ editorRef }: SqlToolbarProps) {
   const { hasDatabase } = useDevTools();
   const { running, runQuery, openSaveDialog, formatActiveSql, clearActiveSql } = useSqlWorkspace();
-  const { setShortcutsOpen } = useWorkspace();
+  // const { setShortcutsOpen } = useWorkspace();
 
   const handleRun = () => {
     const sqlToRun = editorRef.current?.getSqlToRun();
@@ -60,15 +60,17 @@ export function SqlToolbar({ editorRef }: SqlToolbarProps) {
         <span className="sql-toolbar__hint">Ctrl+Enter to run selection or all</span>
       </div>
       <div className="sql-toolbar__right">
-        <button
+        {/* <button
           type="button"
           className="sql-toolbar__icon-button"
           aria-label="Keyboard shortcuts"
           onClick={() => setShortcutsOpen(true)}
         >
           <HelpIcon />
-        </button>
-        <span className="field-label__hint">Read-only: SELECT, PRAGMA, EXPLAIN, WITH</span>
+        </button> */}
+        <span className="field-label__hint">Read-only
+          {/* : SELECT, PRAGMA, EXPLAIN, WITHs */}
+          </span>
       </div>
     </div>
   );
