@@ -1,6 +1,6 @@
 # Getting started
 
-> Full documentation site: run `pnpm dev:docs` or visit [GitHub Pages](https://yellowbooking.github.io/database-devtools/).
+> Full documentation site: run `pnpm dev:docs` or visit the [repository README](https://github.com/tamangRajkumar/database-devtools#readme).
 
 ## Install
 

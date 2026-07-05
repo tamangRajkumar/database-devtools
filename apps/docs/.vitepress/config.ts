@@ -8,7 +8,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/getting-started' },
       { text: 'Architecture', link: '/architecture' },
-      { text: 'GitHub', link: 'https://github.com/yellowbooking/database-devtools' },
+      { text: 'GitHub', link: 'https://github.com/tamangRajkumar/database-devtools' },
     ],
     sidebar: [
       {
@@ -29,7 +29,7 @@ export default defineConfig({
       },
     ],
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/yellowbooking/database-devtools' },
+      { icon: 'github', link: 'https://github.com/tamangRajkumar/database-devtools' },
     ],
   },
 });

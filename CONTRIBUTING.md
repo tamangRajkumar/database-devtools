@@ -62,4 +62,4 @@ See [docs/architecture.md](./docs/architecture.md#multi-database-adapters). New 
 
 ## Questions
 
-Open a [GitHub Discussion](https://github.com/yellowbooking/database-devtools/discussions) or an issue if you are unsure about approach before large changes.
+Open a [GitHub Discussion](https://github.com/tamangRajkumar/database-devtools/discussions) or an issue if you are unsure about approach before large changes.

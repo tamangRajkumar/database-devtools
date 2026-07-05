@@ -1,5 +1,16 @@
 # database-devtools
 
+## 0.1.1
+
+### Added
+
+- npm README with install instructions, features, and documentation links
+
+### Changed
+
+- Repository, homepage, and bugs URLs point to [tamangRajkumar/database-devtools](https://github.com/tamangRajkumar/database-devtools)
+- Improved npm description and keywords for discoverability
+
 ## 0.1.0
 
 ### Added
