@@ -1,56 +1,80 @@
-import { useEffect, useRef } from 'react';
-import { Text, View, type ViewStyle } from 'react-native';
-import { createDevToolsClient } from '../client/createDevToolsClient.js';
-import { buildDevToolsWsUrl, DEFAULT_DEVTOOLS_PORT } from '../types/protocol.js';
+import { StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
+import type { ConnectionState } from '../client/createDevToolsClient';
+import type { DatabaseAdapter } from '../types/adapter';
+import type { DatabaseKind } from '../types/kind';
+import type { FloatingButtonPosition } from '../utils/floatingButtonPosition';
+import { isDevToolsEnabled } from '../utils/isDevToolsEnabled';
+import { DevToolsProvider } from './DevToolsProvider';
+import { DevToolsLauncherModal } from './DevToolsLauncherModal';
+import { DevToolsSettingsModal } from './DevToolsSettingsModal';
+import { FloatingDevToolsButton } from './FloatingDevToolsButton';
+import { MobileDatabaseExplorer } from './mobile/MobileDatabaseExplorer';
+
+export type { ConnectionState };
+export type { FloatingButtonPosition };
 
 export type DatabaseDevToolsProps = {
-  /** Reserved for future database adapters (SQLite, Realm, DuckDB, custom). */
+  /** Raw database instance (auto-detected) or a resolved adapter. */
   database?: unknown;
-  /** WebSocket URL override, e.g. ws://192.168.1.10:3847/ws */
+  /** Explicit database kind override. */
+  type?: DatabaseKind;
+  /** Custom adapter override (advanced). */
+  adapter?: DatabaseAdapter;
   serverUrl?: string;
-  style?: ViewStyle;
+  enabled?: boolean;
+  position?: 'bottom-right' | 'bottom-left';
+  /** Allow dragging the floating button around the screen. */
+  draggable?: boolean;
+  /** Snap the button to screen edges after dragging. */
+  snapToEdges?: boolean;
+  /** Controlled floating button position. */
+  floatingPosition?: FloatingButtonPosition;
+  /** Called when the user drags the floating button to a new position. */
+  onFloatingPositionChange?: (position: FloatingButtonPosition) => void;
+  /** Optional style for the floating button database icon. */
+  style?: StyleProp<TextStyle>;
+  onConnectionStateChange?: (state: ConnectionState) => void;
 };
 
-function resolveServerUrl(serverUrl?: string): string {
-  if (serverUrl) {
-    return serverUrl;
+export function DatabaseDevTools({
+  database,
+  type,
+  adapter,
+  serverUrl,
+  enabled,
+  position = 'bottom-right',
+  draggable = true,
+  snapToEdges = true,
+  floatingPosition,
+  onFloatingPositionChange,
+  style,
+  onConnectionStateChange,
+}: DatabaseDevToolsProps) {
+  if (!isDevToolsEnabled(enabled)) {
+    return null;
   }
-
-  const envUrl =
-    typeof process !== 'undefined'
-      ? process.env.EXPO_PUBLIC_DATABASE_DEVTOOLS_URL
-      : undefined;
-
-  if (envUrl) {
-    return envUrl.startsWith('ws://') || envUrl.startsWith('wss://')
-      ? envUrl
-      : buildDevToolsWsUrl(envUrl.replace(/^https?:\/\//, ''), DEFAULT_DEVTOOLS_PORT);
-  }
-
-  return buildDevToolsWsUrl('localhost', DEFAULT_DEVTOOLS_PORT);
-}
-
-export function DatabaseDevTools({ database: _database, serverUrl, style }: DatabaseDevToolsProps) {
-  const clientRef = useRef<ReturnType<typeof createDevToolsClient> | null>(null);
-
-  useEffect(() => {
-    const client = createDevToolsClient({
-      serverUrl: resolveServerUrl(serverUrl),
-      role: 'mobile',
-    });
-
-    clientRef.current = client;
-    client.connect();
-
-    return () => {
-      client.disconnect();
-      clientRef.current = null;
-    };
-  }, [serverUrl]);
 
   return (
-    <View style={[{ padding: 8 }, style]}>
-      <Text>Database DevTools Loaded</Text>
-    </View>
+    <DevToolsProvider
+      adapter={adapter}
+      database={database}
+      onConnectionStateChange={onConnectionStateChange}
+      serverUrl={serverUrl}
+      type={type}
+    >
+      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+        <FloatingDevToolsButton
+          draggable={draggable}
+          floatingPosition={floatingPosition}
+          iconStyle={style}
+          onFloatingPositionChange={onFloatingPositionChange}
+          position={position}
+          snapToEdges={snapToEdges}
+        />
+        <DevToolsLauncherModal />
+        <DevToolsSettingsModal />
+        <MobileDatabaseExplorer />
+      </View>
+    </DevToolsProvider>
   );
 }

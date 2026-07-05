@@ -1,36 +1,32 @@
-import type { DevToolsRole } from '../types/protocol.js';
-
-export type DeviceRegistrySnapshot = {
-  mobileConnected: boolean;
-  browserConnected: boolean;
-};
+import type { ConnectionManager } from './connectionManager';
+import type { DeviceStatusPayload } from '../types/protocol';
+import { DevToolsRole } from '../types/protocol';
 
 export class DeviceRegistry {
-  private mobileCount = 0;
-  private browserCount = 0;
+  constructor(private readonly connectionManager: ConnectionManager) {}
 
-  register(role: DevToolsRole): void {
-    if (role === 'mobile') {
-      this.mobileCount += 1;
-      return;
-    }
+  snapshot(): DeviceStatusPayload {
+    const browsers = this.connectionManager
+      .getByRole(DevToolsRole.BROWSER)
+      .map((client) => ({
+        connectionId: client.connectionId,
+        connectedAt: client.connectedAt,
+      }));
 
-    this.browserCount += 1;
-  }
+    const mobiles = this.connectionManager
+      .getByRole(DevToolsRole.MOBILE)
+      .map((client) => ({
+        deviceId: client.deviceId ?? client.connectionId,
+        connectionId: client.connectionId,
+        connectedAt: client.connectedAt,
+        metadata: client.metadata,
+      }));
 
-  unregister(role: DevToolsRole): void {
-    if (role === 'mobile') {
-      this.mobileCount = Math.max(0, this.mobileCount - 1);
-      return;
-    }
-
-    this.browserCount = Math.max(0, this.browserCount - 1);
-  }
-
-  snapshot(): DeviceRegistrySnapshot {
     return {
-      mobileConnected: this.mobileCount > 0,
-      browserConnected: this.browserCount > 0,
+      browserCount: browsers.length,
+      mobileCount: mobiles.length,
+      browsers,
+      mobiles,
     };
   }
 }

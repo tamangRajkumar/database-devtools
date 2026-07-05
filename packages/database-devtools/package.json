@@ -3,13 +3,24 @@
   "version": "0.1.0",
   "description": "Chrome DevTools-like experience for databases in React Native applications",
   "license": "MIT",
+  "author": "Database DevTools contributors",
+  "homepage": "https://github.com/yellowbooking/database-devtools#readme",
+  "bugs": "https://github.com/yellowbooking/database-devtools/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yellowbooking/database-devtools.git",
+    "directory": "packages/database-devtools"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "react-native": "./src/index.ts",
+  "react-native": "./src/native.ts",
   "exports": {
     ".": {
-      "react-native": "./src/index.ts",
+      "react-native": "./src/native.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
@@ -29,6 +40,30 @@
       "types": "./dist/types/protocol.d.ts",
       "import": "./dist/types/protocol.js",
       "default": "./dist/types/protocol.js"
+    },
+    "./adapter": {
+      "react-native": "./src/adapter/index.ts",
+      "types": "./dist/adapter/index.d.ts",
+      "import": "./dist/adapter/index.js",
+      "require": "./dist/adapter/index.cjs",
+      "default": "./dist/adapter/index.js"
+    },
+    "./inspector": {
+      "types": "./dist/inspector/index.d.ts",
+      "import": "./dist/inspector/index.js",
+      "default": "./dist/inspector/index.js"
+    },
+    "./inspector-sqlite": {
+      "types": "./dist/inspectors/sqlite/index.d.ts",
+      "import": "./dist/inspectors/sqlite/index.js",
+      "default": "./dist/inspectors/sqlite/index.js"
+    },
+    "./adapters/sqlite": {
+      "react-native": "./src/adapters/sqlite/index.ts",
+      "types": "./dist/adapters/sqlite/index.d.ts",
+      "import": "./dist/adapters/sqlite/index.js",
+      "require": "./dist/adapters/sqlite/index.cjs",
+      "default": "./dist/adapters/sqlite/index.js"
     }
   },
   "bin": {
@@ -36,20 +71,40 @@
   },
   "files": [
     "dist",
-    "src"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx watch src/cli/index.ts",
-    "prepare": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "react": ">=18",
-    "react-native": ">=0.73"
+    "react-native": ">=0.73",
+    "@react-native-async-storage/async-storage": ">=1.23",
+    "@expo/vector-icons": ">=14",
+    "expo-sqlite": ">=15",
+    "expo-clipboard": ">=7",
+    "sql.js": ">=1.13"
   },
   "peerDependenciesMeta": {
     "react-native": {
+      "optional": true
+    },
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    },
+    "@expo/vector-icons": {
+      "optional": true
+    },
+    "expo-sqlite": {
+      "optional": true
+    },
+    "expo-clipboard": {
+      "optional": true
+    },
+    "sql.js": {
       "optional": true
     }
   },
@@ -60,12 +115,17 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.2",
-    "@types/react": "^19.0.2",
+    "@types/react": "~19.1.0",
+    "@types/sql.js": "^1.4.9",
     "@types/ws": "^8.5.13",
-    "react": "^19.0.0",
+    "expo-sqlite": "~16.0.10",
+    "expo-clipboard": "~8.0.8",
+    "react": "19.1.0",
+    "sql.js": "^1.13.0",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
   },
   "keywords": [
     "react-native",
@@ -73,9 +133,5 @@
     "database",
     "devtools",
     "debugging"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-org/database-devtools"
-  }
+  ]
 }

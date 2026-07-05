@@ -1,40 +1,47 @@
 # Architecture
 
-## Monorepo
-
-pnpm workspaces isolate publishable library code from demo applications.
-
-| Path | Role |
-|------|------|
-| `packages/database-devtools` | npm package: React Native component, WebSocket client, CLI server |
-| `apps/web` | Browser UI for inspecting connected mobile apps |
-| `apps/example` | Minimal Expo app proving local workspace integration |
-| `docs/` | Human-readable documentation |
-
-## Package internals
+Database DevTools uses a **hub-and-spoke** model:
 
 ```
-packages/database-devtools/src/
-├── cli/           # `npx database-devtools` entry
-├── client/        # WebSocket client (mobile + browser)
-├── components/    # `<DatabaseDevTools />` React Native UI
-├── server/        # Express + WebSocket hub
-└── types/         # Shared protocol types
+Browser ──WebSocket──► Inspector Hub ◄──WebSocket── Mobile App
 ```
 
-### Future adapter layer
+The mobile app exports database snapshots over HTTP. The browser inspects snapshots locally (sql.js for SQLite).
 
-The `database` prop on `<DatabaseDevTools />` will accept adapter instances. Adapters will live in separate packages (e.g. `@database-devtools/sqlite`) to keep the core small.
+## Published packages
 
-## WebSocket protocol
+| Package | Role |
+|---------|------|
+| `database-devtools` | RN component, CLI hub, **built-in SQLite adapter**, adapter registry, browser inspector (`database-devtools/inspector-sqlite`) |
 
-1. Client connects to `ws://host:3847/ws`
-2. Client sends `{ type: 'register', payload: { role: 'mobile' | 'browser' } }`
-3. Server tracks connections and broadcasts `{ type: 'deviceStatus', payload: { mobileConnected, browserConnected } }`
+## Adapter resolution
 
-## Why subpath exports?
+```tsx
+<DatabaseDevTools database={db} />           // auto-detect SQLite
+<DatabaseDevTools database={db} type="sqlite" />
+<DatabaseDevTools database={db} adapter={custom} />
+```
 
-- `database-devtools` — full export including React Native component
-- `database-devtools/client` — browser-safe WebSocket client (used by `apps/web`)
-- `database-devtools/server` — programmatic server for advanced embedding
-- `database-devtools/protocol` — shared types without runtime code
+Priority: **custom adapter → explicit type → auto-detection → error**.
+
+## Multi-database adapters
+
+SQLite ships built into `database-devtools`. Adding Realm or DuckDB requires:
+
+1. New optional adapter package
+2. Matching inspector package
+3. `register*()` call — no core protocol changes
+
+## Write protocol (edit mode)
+
+1. Browser sends `beginTransactionRequest` to the hub
+2. Hub forwards to the mobile device; adapter runs `BEGIN IMMEDIATE`
+3. Browser sends `writeRequest` messages (parameterized SQL)
+4. On **Commit**: `commitTransaction` → snapshot refresh
+5. On **Discard**: `rollbackTransaction`
+
+## Security
+
+- DevTools overlay is **disabled in production** by default (`__DEV__`)
+- The hub listens on `0.0.0.0` — use only on trusted networks
+- Edit mode writes to the **live** device database

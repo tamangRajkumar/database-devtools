@@ -1,3 +1,15 @@
-export type { DevToolsServer, DevToolsServerOptions } from './createDevToolsServer.js';
-export { createDevToolsServer } from './createDevToolsServer.js';
-export { DeviceRegistry } from './deviceRegistry.js';
+export type { DevToolsServer, DevToolsServerOptions } from './createDevToolsServer';
+export { createDevToolsServer } from './createDevToolsServer';
+export { ConnectionManager } from './connectionManager';
+export type { ConnectedClient } from './connectionManager';
+export { DeviceRegistry } from './deviceRegistry';
+export { MessageRouter } from './messageRouter';
+export type { OutboundMessage } from './messageRouter';
+export { Heartbeat } from './heartbeat';
+export { createCorsMiddleware, resolveCorsOrigin } from './cors';
+export type { CorsOptions } from './cors';
+export { RefreshCoordinator } from './refreshCoordinator';
+export { SnapshotStore } from './snapshotStore';
+export type { StoredSnapshot } from './snapshotStore';
+export { PendingRefreshStore } from './pendingRefreshStore';
+export type { PendingRefresh } from './pendingRefreshStore';

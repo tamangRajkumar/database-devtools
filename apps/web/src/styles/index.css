@@ -1,0 +1,37 @@
+@import './themes.css';
+@import './layout.css';
+@import './components.css';
+@import './explorer.css';
+@import './edit-mode.css';
+@import './sql-workspace.css';
+@import './workspace.css';
+@import './overview.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100dvh;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
