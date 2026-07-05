@@ -5,9 +5,9 @@ import type {
   TableInfo,
   TablePageRequest,
   TablePageResult,
-} from 'database-devtools';
-import type { DatabaseInspector } from 'database-devtools/inspector';
-import type { SnapshotExport } from 'database-devtools';
+} from '../../types/inspection';
+import type { DatabaseInspector } from '../../inspector/types';
+import type { SnapshotExport } from '../../types/snapshot';
 import { getSqlModule } from './sqlModule';
 import { buildSearchClause, quoteIdentifier, resolveSortColumn } from './tableQuery';
 

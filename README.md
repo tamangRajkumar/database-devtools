@@ -76,21 +76,22 @@ EXPO_PUBLIC_DATABASE_DEVTOOLS_URL=ws://192.168.1.10:3847/ws
 - **Edit mode** — transactional inserts, updates, and deletes on the live device database
 - **Multi-database architecture** — adapter registry for future engines (Realm, DuckDB, etc.)
 
-## Packages
+## Package
 
-| Package | Description |
+| Export | Description |
 |---------|-------------|
 | [`database-devtools`](./packages/database-devtools) | RN component, CLI hub, built-in SQLite adapter, WebSocket protocol |
-| [`@database-devtools/inspector-sqlite`](./packages/inspector-sqlite) | Browser snapshot inspector (sql.js) |
+| `database-devtools/inspector-sqlite` | Browser snapshot inspector (sql.js) — used by the bundled web UI |
 
 Advanced SQLite wiring: `import { createExpoSqliteAdapter } from 'database-devtools/adapters/sqlite'`.
+
+Custom browser integrations: `import { registerSqliteInspector } from 'database-devtools/inspector-sqlite'`.
 
 ## Monorepo layout
 
 ```
 database-devtools/
-├── packages/database-devtools/   # Core publishable package (includes SQLite adapter)
-├── packages/inspector-sqlite/    # Browser inspector
+├── packages/database-devtools/   # Publishable npm package (mobile + hub + browser inspector)
 ├── apps/web/                     # Browser UI
 ├── apps/example/                 # Expo example app
 └── apps/docs/                    # VitePress documentation site
@@ -100,7 +101,7 @@ database-devtools/
 
 ```bash
 pnpm install
-pnpm build          # builds hub, inspector, and bundled browser UI (dist/web)
+pnpm build          # builds hub and bundled browser UI (dist/web)
 pnpm test
 pnpm dev:example   # Expo example app
 ```

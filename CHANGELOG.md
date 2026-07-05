@@ -11,9 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Multi-database adapter registry with auto-detection (`resolveAdapter`)
 - Built-in SQLite adapter for expo-sqlite (no separate package required)
-- `@database-devtools/inspector-sqlite` browser snapshot inspector
+- Browser SQLite inspector via `database-devtools/inspector-sqlite` subpath
 - Explorer, SQL Workspace, and live edit mode in browser UI
 - GitHub Actions CI, Vitest test suite, and Changesets release workflow
+
+### Changed
+
+- Consolidated browser inspector into `database-devtools` — single `npm install database-devtools` for app developers
 
 ## [0.1.0] - 2026-07-01
 

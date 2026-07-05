@@ -12,8 +12,7 @@ The mobile app exports database snapshots over HTTP. The browser inspects snapsh
 
 | Package | Role |
 |---------|------|
-| `database-devtools` | RN component, CLI hub, **built-in SQLite adapter**, adapter registry |
-| `@database-devtools/inspector-sqlite` | Browser snapshot inspector |
+| `database-devtools` | RN component, CLI hub, **built-in SQLite adapter**, adapter registry, browser inspector (`database-devtools/inspector-sqlite`) |
 
 ## Adapter resolution
 

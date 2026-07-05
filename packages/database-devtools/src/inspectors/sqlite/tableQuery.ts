@@ -1,4 +1,4 @@
-import type { ColumnInfo } from 'database-devtools';
+import type { ColumnInfo } from '../../types/inspection';
 
 export function quoteIdentifier(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;

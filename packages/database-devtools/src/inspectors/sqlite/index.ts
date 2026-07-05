@@ -1,4 +1,4 @@
-import { getInspectorRegistry } from 'database-devtools/inspector';
+import { getInspectorRegistry } from '../../inspector/registry';
 import { configureSqliteWasm } from './sqlModule';
 import {
   filterTables,

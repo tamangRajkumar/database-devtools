@@ -58,8 +58,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm clean && pnpm build
 
-      - name: Pack publishable packages
+      - name: Pack publishable package
         run: |
           pnpm --filter database-devtools pack --pack-destination /tmp/packs
-          pnpm --filter @database-devtools/inspector-sqlite pack --pack-destination /tmp/packs
           ls -la /tmp/packs

@@ -53,6 +53,11 @@
       "import": "./dist/inspector/index.js",
       "default": "./dist/inspector/index.js"
     },
+    "./inspector-sqlite": {
+      "types": "./dist/inspectors/sqlite/index.d.ts",
+      "import": "./dist/inspectors/sqlite/index.js",
+      "default": "./dist/inspectors/sqlite/index.js"
+    },
     "./adapters/sqlite": {
       "react-native": "./src/adapters/sqlite/index.ts",
       "types": "./dist/adapters/sqlite/index.d.ts",
@@ -80,7 +85,8 @@
     "@react-native-async-storage/async-storage": ">=1.23",
     "@expo/vector-icons": ">=14",
     "expo-sqlite": ">=15",
-    "expo-clipboard": ">=7"
+    "expo-clipboard": ">=7",
+    "sql.js": ">=1.13"
   },
   "peerDependenciesMeta": {
     "react-native": {
@@ -97,6 +103,9 @@
     },
     "expo-clipboard": {
       "optional": true
+    },
+    "sql.js": {
+      "optional": true
     }
   },
   "dependencies": {
@@ -107,10 +116,12 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.2",
     "@types/react": "~19.1.0",
+    "@types/sql.js": "^1.4.9",
     "@types/ws": "^8.5.13",
     "expo-sqlite": "~16.0.10",
     "expo-clipboard": "~8.0.8",
     "react": "19.1.0",
+    "sql.js": "^1.13.0",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

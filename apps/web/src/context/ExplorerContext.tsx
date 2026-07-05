@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { ColumnInfo, TablePageResult } from 'database-devtools';
-import { filterTables, sortTables } from '@database-devtools/inspector-sqlite';
+import { filterTables, sortTables } from 'database-devtools/inspector-sqlite';
 import { resolveExplorerTableSelection } from '../lib/resolveExplorerTableSelection';
 import { useDevTools } from './DevToolsContext';
 

@@ -1,5 +1,5 @@
 import { useMemo, useState, type MouseEvent } from 'react';
-import { filterTables } from '@database-devtools/inspector-sqlite';
+import { filterTables } from 'database-devtools/inspector-sqlite';
 import { useDevTools } from '../../context/DevToolsContext';
 import { useExplorer } from '../../context/ExplorerContext';
 import { useSqlWorkspace } from '../../context/SqlWorkspaceContext';

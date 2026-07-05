@@ -53,8 +53,7 @@ pnpm dev:example
 
 | Path | Published to npm |
 |------|------------------|
-| `packages/database-devtools` | `database-devtools` (includes built-in SQLite adapter) |
-| `packages/inspector-sqlite` | `@database-devtools/inspector-sqlite` |
+| `packages/database-devtools` | `database-devtools` (mobile, hub, CLI, and `database-devtools/inspector-sqlite` browser subpath) |
 | `apps/web`, `apps/example` | No (demos) |
 
 ## Adding a database adapter

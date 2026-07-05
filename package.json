@@ -2,18 +2,18 @@
   "name": "database-devtools-workspace",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter database-devtools build && pnpm --filter @database-devtools/inspector-sqlite build && pnpm --filter @database-devtools/web build",
+    "build": "pnpm --filter database-devtools build && pnpm --filter @database-devtools/web build",
     "dev:cli": "pnpm --filter @database-devtools/web build && pnpm --filter database-devtools dev",
     "dev:web": "pnpm --filter @database-devtools/web dev",
     "dev:docs": "pnpm --filter @database-devtools/docs dev",
     "dev:example": "pnpm --filter @database-devtools/example start",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter database-devtools test && pnpm --filter @database-devtools/inspector-sqlite test && pnpm --filter @database-devtools/web test",
+    "test": "pnpm --filter database-devtools test && pnpm --filter @database-devtools/web test",
     "test:ci": "pnpm clean && pnpm build && pnpm test",
     "clean": "pnpm -r exec node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && pnpm publish -r --filter database-devtools --filter @database-devtools/inspector-sqlite"
+    "release": "pnpm build && pnpm publish --filter database-devtools"
   },
   "engines": {
     "node": ">=20",
