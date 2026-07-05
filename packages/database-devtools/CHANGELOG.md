@@ -1,5 +1,17 @@
 # database-devtools
 
+## 0.1.4
+
+### Fixed
+
+- Publish pipeline: package `build` now bundles the browser hub UI (`dist/web`) and copies a stable `sql-wasm.wasm` fallback
+- Browser snapshot refresh no longer fails with "both async and sync fetching of the wasm failed" when the npm tarball was missing web assets
+- `prepublishOnly` verification blocks incomplete publishes (missing `dist/web`, wasm, or `dist/native.js`)
+
+### Changed
+
+- Removed side-effect `registerSqliteInspector()` from `inspector-sqlite` entry; callers must register explicitly (hub UI already does)
+
 ## 0.1.3
 
 ### Fixed

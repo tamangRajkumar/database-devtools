@@ -1,6 +1,6 @@
 {
   "name": "database-devtools",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Inspect SQLite in React Native & Expo from your browser — browse tables, run SQL, edit data. DevTools for mobile databases.",
   "license": "MIT",
   "author": "Rajkumar Tamang",
@@ -75,7 +75,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build:lib": "tsup",
+    "build": "pnpm run build:lib && node scripts/build-web.mjs",
+    "prepublishOnly": "node scripts/verify-publish.mjs",
     "dev": "tsx watch src/cli/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
