@@ -17,7 +17,16 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     clean: true,
-    external: ['react', 'react-native', 'sql.js'],
+    external: [
+      'react',
+      'react-native',
+      'sql.js',
+      'expo-constants',
+      '@react-native-async-storage/async-storage',
+      '@expo/vector-icons',
+      '@expo/vector-icons/MaterialCommunityIcons',
+      'expo-clipboard',
+    ],
     treeshake: true,
   },
   {

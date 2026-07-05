@@ -1,5 +1,12 @@
 # database-devtools
 
+## 0.1.3
+
+### Fixed
+
+- Metro bundling: replaced dynamic `require()` with static imports for `react-native`, `expo-constants`, and `@react-native-async-storage/async-storage`
+- Graceful fallback to in-memory device ID when AsyncStorage native module is unavailable (e.g. Expo Go)
+
 ## 0.1.2
 
 ### Fixed

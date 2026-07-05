@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeModules } from 'react-native';
+
 import { generateDeviceId } from './ids';
 
 export const PERSISTED_DEVICE_ID_STORAGE_KEY = '@database-devtools/device-id';
@@ -9,33 +12,23 @@ export type DeviceIdStorage = {
 
 let memoryDeviceId: string | null = null;
 
-export function createAsyncStorageDeviceIdStore(): DeviceIdStorage | null {
-  try {
-    // Optional peer — only available in React Native hosts with AsyncStorage installed.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default as DeviceIdStorage;
-
-    return AsyncStorage;
-  } catch {
-    return null;
-  }
+function hasAsyncStorageNativeModule(): boolean {
+  return Boolean(
+    NativeModules.RNCAsyncStorage ??
+      NativeModules.RNC_AsyncSQLiteDBStoragePassThru ??
+      NativeModules.PlatformLocalStorage,
+  );
 }
 
-export async function loadOrCreateDeviceId(
-  storage: DeviceIdStorage | null = createAsyncStorageDeviceIdStore(),
-): Promise<string> {
-  if (storage) {
-    const stored = await storage.getItem(PERSISTED_DEVICE_ID_STORAGE_KEY);
-
-    if (stored) {
-      return stored;
-    }
-
-    const created = generateDeviceId();
-    await storage.setItem(PERSISTED_DEVICE_ID_STORAGE_KEY, created);
-    return created;
+export function createAsyncStorageDeviceIdStore(): DeviceIdStorage | null {
+  if (!hasAsyncStorageNativeModule()) {
+    return null;
   }
 
+  return AsyncStorage;
+}
+
+function loadOrCreateMemoryDeviceId(): string {
   if (!memoryDeviceId) {
     memoryDeviceId = generateDeviceId();
   }
@@ -43,6 +36,27 @@ export async function loadOrCreateDeviceId(
   return memoryDeviceId;
 }
 
+export async function loadOrCreateDeviceId(
+  storage: DeviceIdStorage | null = createAsyncStorageDeviceIdStore(),
+): Promise<string> {
+  if (storage) {
+    try {
+      const stored = await storage.getItem(PERSISTED_DEVICE_ID_STORAGE_KEY);
+
+      if (stored) {
+        return stored;
+      }
+
+      const created = generateDeviceId();
+      await storage.setItem(PERSISTED_DEVICE_ID_STORAGE_KEY, created);
+      return created;
+    } catch {
+      // Expo Go / missing native module — use an in-memory id for this session.
+    }
+  }
+
+  return loadOrCreateMemoryDeviceId();
+}
 /** @internal Test helper */
 export function resetMemoryDeviceIdForTests(): void {
   memoryDeviceId = null;

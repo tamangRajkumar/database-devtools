@@ -35,4 +35,19 @@ describe('loadOrCreateDeviceId', () => {
     const loaded = await loadOrCreateDeviceId(storage);
     expect(loaded).toBe(created);
   });
+
+  it('falls back to memory when storage throws', async () => {
+    const storage = {
+      getItem: async () => {
+        throw new Error('Native module is null');
+      },
+      setItem: async () => undefined,
+    };
+
+    const first = await loadOrCreateDeviceId(storage);
+    const second = await loadOrCreateDeviceId(storage);
+
+    expect(first).toBe(second);
+    expect(first.startsWith('device-')).toBe(true);
+  });
 });
