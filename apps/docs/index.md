@@ -11,7 +11,7 @@ hero:
       link: /getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/yellowbooking/database-devtools
+      link: https://github.com/tamangRajkumar/database-devtools
 
 features:
   - title: Zero-config SQLite

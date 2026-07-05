@@ -11,7 +11,7 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Report vulnerabilities via [GitHub Security Advisories](https://github.com/yellowbooking/database-devtools/security/advisories/new) (preferred), or email **security@yellowbooking.com**.
+Report vulnerabilities via [GitHub Security Advisories](https://github.com/tamangRajkumar/database-devtools/security/advisories/new) (preferred), or open a private [security issue](https://github.com/tamangRajkumar/database-devtools/issues).
 
 Include:
 

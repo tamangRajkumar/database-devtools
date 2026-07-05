@@ -4,7 +4,7 @@ Chrome DevTools-like experience for databases running inside React Native applic
 
 Inspect schema, browse rows, run SQL, and edit live data on connected devices — all from your browser.
 
-**Documentation:** [database-devtools on GitHub Pages](https://yellowbooking.github.io/database-devtools/) (or run `pnpm dev:docs` locally)
+**Documentation:** [github.com/tamangRajkumar/database-devtools](https://github.com/tamangRajkumar/database-devtools) (or run `pnpm dev:docs` locally)
 
 ## Install
 
@@ -71,7 +71,7 @@ EXPO_PUBLIC_DATABASE_DEVTOOLS_URL=ws://192.168.1.10:3847/ws
 ## Features
 
 - **Zero-config SQLite** — built-in expo-sqlite auto-detection
-- **Explorer** — tables, schema, paginated rows, search, row detail drawer
+- **Explorer** — tables, schema, paginated rows, search, and sort
 - **SQL workspace** — read-only queries with history, favorites, export (TSV, CSV, JSON)
 - **Edit mode** — transactional inserts, updates, and deletes on the live device database
 - **Multi-database architecture** — adapter registry for future engines (Realm, DuckDB, etc.)

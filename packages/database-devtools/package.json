@@ -1,14 +1,14 @@
 {
   "name": "database-devtools",
-  "version": "0.1.0",
-  "description": "Chrome DevTools-like experience for databases in React Native applications",
+  "version": "0.1.1",
+  "description": "Inspect SQLite in React Native & Expo from your browser — browse tables, run SQL, edit data. DevTools for mobile databases.",
   "license": "MIT",
-  "author": "Database DevTools contributors",
-  "homepage": "https://github.com/yellowbooking/database-devtools#readme",
-  "bugs": "https://github.com/yellowbooking/database-devtools/issues",
+  "author": "Rajkumar Tamang",
+  "homepage": "https://github.com/tamangRajkumar/database-devtools#readme",
+  "bugs": "https://github.com/tamangRajkumar/database-devtools/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yellowbooking/database-devtools.git",
+    "url": "git+https://github.com/tamangRajkumar/database-devtools.git",
     "directory": "packages/database-devtools"
   },
   "publishConfig": {
@@ -71,7 +71,8 @@
   },
   "files": [
     "dist",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -129,9 +130,18 @@
   },
   "keywords": [
     "react-native",
+    "expo",
+    "expo-sqlite",
     "sqlite",
     "database",
     "devtools",
-    "debugging"
+    "debugging",
+    "inspector",
+    "database-inspector",
+    "mobile-development",
+    "sql",
+    "react-native-debugging",
+    "database-tools",
+    "local-database"
   ]
 }
