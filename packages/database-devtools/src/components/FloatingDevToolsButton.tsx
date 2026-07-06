@@ -24,10 +24,15 @@ import { getConnectionDotColor } from './ConnectionStatusBadge';
 
 const DEFAULT_ICON_SIZE = 22;
 const DEFAULT_ICON_COLOR = '#f8fafc';
+const DEFAULT_BUTTON_COLOR = '#1e293b';
 
 export type FloatingDevToolsButtonProps = {
   position?: FloatingButtonCorner;
   iconStyle?: StyleProp<TextStyle>;
+  /** Floating button background color. */
+  buttonColor?: string;
+  /** Database icon color. */
+  iconColor?: string;
   draggable?: boolean;
   snapToEdges?: boolean;
   floatingPosition?: FloatingButtonPosition;
@@ -37,6 +42,8 @@ export type FloatingDevToolsButtonProps = {
 export function FloatingDevToolsButton({
   position = 'bottom-right',
   iconStyle,
+  buttonColor,
+  iconColor,
   draggable = true,
   snapToEdges = true,
   floatingPosition,
@@ -164,17 +171,24 @@ export function FloatingDevToolsButton({
     return null;
   }
 
+  const resolvedButtonColor = buttonColor ?? DEFAULT_BUTTON_COLOR;
+  const resolvedIconColor =
+    iconColor ?? StyleSheet.flatten(iconStyle)?.color ?? DEFAULT_ICON_COLOR;
+  const buttonStyle = { backgroundColor: resolvedButtonColor };
+  const statusDotStyle = {
+    backgroundColor: getConnectionDotColor(connectionState),
+    borderColor: resolvedButtonColor,
+  };
+
   const buttonContent = (
     <>
       <MaterialCommunityIcons
-        color={DEFAULT_ICON_COLOR}
+        color={resolvedIconColor}
         name="database"
         size={DEFAULT_ICON_SIZE}
         style={iconStyle}
       />
-      <View
-        style={[styles.statusDot, { backgroundColor: getConnectionDotColor(connectionState) }]}
-      />
+      <View style={[styles.statusDot, statusDotStyle]} />
     </>
   );
 
@@ -187,7 +201,11 @@ export function FloatingDevToolsButton({
           accessibilityLabel="Open Database DevTools"
           accessibilityRole="button"
           onPress={openLauncher}
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+          style={({ pressed }) => [
+            styles.button,
+            buttonStyle,
+            pressed && styles.buttonPressed,
+          ]}
         >
           {buttonContent}
         </Pressable>
@@ -213,7 +231,7 @@ export function FloatingDevToolsButton({
         accessibilityHint="Drag to move. Tap to open DevTools launcher."
         accessibilityLabel="Open Database DevTools"
         accessibilityRole="button"
-        style={[styles.button, dragPosition && styles.buttonDragging]}
+        style={[styles.button, buttonStyle, dragPosition && styles.buttonDragging]}
       >
         {buttonContent}
       </View>
@@ -243,7 +261,6 @@ const styles = StyleSheet.create({
     width: FLOATING_BUTTON_SIZE,
     height: FLOATING_BUTTON_SIZE,
     borderRadius: FLOATING_BUTTON_SIZE / 2,
-    backgroundColor: '#1e293b',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -267,6 +284,5 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: '#1e293b',
   },
 });
