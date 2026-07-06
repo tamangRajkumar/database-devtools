@@ -63,3 +63,14 @@ See [docs/architecture.md](./docs/architecture.md#multi-database-adapters). New 
 ## Questions
 
 Open a [GitHub Discussion](https://github.com/tamangRajkumar/database-devtools/discussions) or an issue if you are unsure about approach before large changes.
+
+## Publishing to npm
+
+The `database-devtools` package includes bundled browser UI assets under `dist/web/`. Publishing requires the full build:
+
+```bash
+pnpm build
+pnpm publish --filter database-devtools --no-git-checks
+```
+
+`prepublishOnly` verifies `dist/web/index.html`, `dist/web/sql-wasm.wasm`, and hashed wasm in `dist/web/assets/`.

@@ -28,5 +28,3 @@ export {
   sqliteInspectorDefinition,
 };
 export { configureSqliteWasm } from './sqlModule';
-
-registerSqliteInspector();

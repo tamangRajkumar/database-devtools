@@ -33,6 +33,10 @@ export type DatabaseDevToolsProps = {
   onFloatingPositionChange?: (position: FloatingButtonPosition) => void;
   /** Optional style for the floating button database icon. */
   style?: StyleProp<TextStyle>;
+  /** Floating button background color. */
+  buttonColor?: string;
+  /** Database icon color. */
+  iconColor?: string;
   onConnectionStateChange?: (state: ConnectionState) => void;
 };
 
@@ -48,6 +52,8 @@ export function DatabaseDevTools({
   floatingPosition,
   onFloatingPositionChange,
   style,
+  buttonColor,
+  iconColor,
   onConnectionStateChange,
 }: DatabaseDevToolsProps) {
   if (!isDevToolsEnabled(enabled)) {
@@ -64,8 +70,10 @@ export function DatabaseDevTools({
     >
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <FloatingDevToolsButton
+          buttonColor={buttonColor}
           draggable={draggable}
           floatingPosition={floatingPosition}
+          iconColor={iconColor}
           iconStyle={style}
           onFloatingPositionChange={onFloatingPositionChange}
           position={position}

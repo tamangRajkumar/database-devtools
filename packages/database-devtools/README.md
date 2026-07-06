@@ -94,3 +94,16 @@ For **local development only**. The hub listens on `0.0.0.0`. The RN overlay is 
 ## License
 
 MIT © [tamangRajkumar/database-devtools](https://github.com/tamangRajkumar/database-devtools)
+
+## Publishing (maintainers)
+
+The npm package ships **two artifacts**: the JS library (`dist/*.js`) and the static browser hub (`dist/web/` including `sql-wasm.wasm`).
+
+Always run the **full** build before publishing:
+
+```bash
+pnpm build                    # from monorepo root
+pnpm --filter database-devtools publish --no-git-checks --otp=CODE
+```
+
+Do **not** run `tsup` alone — it wipes `dist/` and does not rebuild the web UI. `prepublishOnly` will fail if `dist/web` or wasm assets are missing.

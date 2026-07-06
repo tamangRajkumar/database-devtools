@@ -1,3 +1,6 @@
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
 /** Host loopback aliases that do not reach the dev machine from Android. */
 const ANDROID_LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
@@ -79,21 +82,11 @@ export function getConnectionHintForPlatform(
 }
 
 function getPlatformOs(): string {
-  try {
-    const { Platform } = require('react-native') as { Platform: { OS: string } };
-    return Platform.OS;
-  } catch {
-    return 'web';
-  }
+  return Platform.OS;
 }
 
 function readMetroDevHostRuntime(): string | undefined {
-  try {
-    const mod = require('expo-constants') as { default?: ExpoConstantsShape };
-    return readMetroDevHostFromConstants(mod.default);
-  } catch {
-    return undefined;
-  }
+  return readMetroDevHostFromConstants(Constants);
 }
 
 export function readMetroDevHost(): string | undefined {

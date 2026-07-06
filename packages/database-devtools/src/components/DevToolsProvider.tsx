@@ -179,12 +179,18 @@ export function DevToolsProvider({
   useEffect(() => {
     let cancelled = false;
 
-    void loadOrCreateDeviceId().then((persistedId) => {
-      if (!cancelled) {
-        setDeviceId(persistedId);
-        setDeviceIdReady(true);
-      }
-    });
+    void loadOrCreateDeviceId()
+      .then((persistedId) => {
+        if (!cancelled) {
+          setDeviceId(persistedId);
+          setDeviceIdReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDeviceIdReady(true);
+        }
+      });
 
     return () => {
       cancelled = true;

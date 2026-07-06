@@ -10,6 +10,7 @@ export function configureSqliteWasm(locator: () => string): void {
 export async function getSqlModule(): Promise<SqlJsStatic> {
   if (!sqlModulePromise) {
     sqlModulePromise = initSqlJs({
+      // Vite emits /assets/sql-wasm-<hash>.wasm; build-web.mjs also copies /sql-wasm.wasm.
       locateFile: () => wasmLocator?.() ?? '/sql-wasm.wasm',
     });
   }

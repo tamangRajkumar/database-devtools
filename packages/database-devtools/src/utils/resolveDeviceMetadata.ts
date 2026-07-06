@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import type { DeviceMetadata } from '../types/protocol';
 
 type ExpoConstants = {
@@ -11,12 +12,7 @@ type ExpoConstants = {
 };
 
 function getExpoConstants(): ExpoConstants | undefined {
-  try {
-    const mod = require('expo-constants') as { default?: ExpoConstants };
-    return mod.default;
-  } catch {
-    return undefined;
-  }
+  return Constants;
 }
 
 export function resolveDeviceMetadata(): DeviceMetadata {
