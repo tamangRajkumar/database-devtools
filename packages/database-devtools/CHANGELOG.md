@@ -1,5 +1,12 @@
 # database-devtools
 
+## 0.1.5
+
+### Added
+
+- `buttonColor` and `iconColor` props on `DatabaseDevTools` to customize the floating launcher button
+- Floating button icon color can also be set via the existing `style` prop when `iconColor` is omitted
+
 ## 0.1.4
 
 ### Fixed

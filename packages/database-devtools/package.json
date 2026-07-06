@@ -1,6 +1,6 @@
 {
   "name": "database-devtools",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Inspect SQLite in React Native & Expo from your browser — browse tables, run SQL, edit data. DevTools for mobile databases.",
   "license": "MIT",
   "author": "Rajkumar Tamang",
