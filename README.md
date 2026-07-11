@@ -9,10 +9,16 @@ Inspect schema, browse rows, run SQL, and edit live data on connected devices â€
 ## Install
 
 ```bash
-npm install database-devtools expo-sqlite
+npm install database-devtools
 ```
 
-Peer dependencies: `react`, `react-native`, `expo-sqlite`.
+Expo projects (recommended):
+
+```bash
+npx expo install database-devtools expo-sqlite
+```
+
+Mobile UI dependencies (`@expo/vector-icons`, async storage, etc.) install automatically with `database-devtools`. You still need **`expo-sqlite`** for your app database.
 
 ## Quick start
 
