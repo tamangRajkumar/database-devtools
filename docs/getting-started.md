@@ -5,7 +5,10 @@
 ## Install
 
 ```bash
-npm install database-devtools expo-sqlite
+npm install database-devtools
+
+# Expo (recommended — matches your SDK versions)
+npx expo install database-devtools expo-sqlite
 ```
 
 ## Mobile app

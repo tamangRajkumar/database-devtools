@@ -1,5 +1,12 @@
 # database-devtools
 
+## 0.1.6
+
+### Changed
+
+- Mobile UI dependencies (`@expo/vector-icons`, `@react-native-async-storage/async-storage`, `expo-constants`, `expo-clipboard`) are now regular dependencies — they install automatically with `npm install database-devtools`
+- Install docs updated: `expo-sqlite` remains the only peer dependency Expo apps need to add explicitly (recommended via `npx expo install`)
+
 ## 0.1.5
 
 ### Added

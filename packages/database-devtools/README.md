@@ -20,10 +20,16 @@
 ## Install
 
 ```bash
-npm install database-devtools expo-sqlite
+npm install database-devtools
 ```
 
-Peer dependencies: `react`, `react-native`, `expo-sqlite`.
+Expo projects (recommended — aligns native module versions with your SDK):
+
+```bash
+npx expo install database-devtools expo-sqlite
+```
+
+`database-devtools` bundles its mobile UI dependencies (`@expo/vector-icons`, `@react-native-async-storage/async-storage`, `expo-constants`, `expo-clipboard`). You still need **`expo-sqlite`** in your app for the database itself (`react` and `react-native` are expected to already be present).
 
 ## Quick start — React Native / Expo
 

@@ -3,7 +3,10 @@
 ## Install
 
 ```bash
-npm install database-devtools expo-sqlite
+npm install database-devtools
+
+# Expo (recommended)
+npx expo install database-devtools expo-sqlite
 ```
 
 ## Usage
