@@ -31,6 +31,12 @@ npx expo install database-devtools expo-sqlite
 
 `database-devtools` bundles its mobile UI dependencies (`@expo/vector-icons`, `@react-native-async-storage/async-storage`, `expo-constants`, `expo-clipboard`). You still need **`expo-sqlite`** in your app for the database itself (`react` and `react-native` are expected to already be present).
 
+If AsyncStorage is not linked into your native binary (common when it is only a nested dependency), DevTools still works with a **session-only** device id. To persist device ids across restarts, install and rebuild:
+
+```bash
+npx expo install @react-native-async-storage/async-storage
+```
+
 ## Quick start — React Native / Expo
 
 ```tsx

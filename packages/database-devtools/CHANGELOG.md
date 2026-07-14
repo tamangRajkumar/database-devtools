@@ -1,5 +1,11 @@
 # database-devtools
 
+## 0.1.7
+
+### Fixed
+
+- Package load no longer crashes when AsyncStorage native module is null / unlinked (common when AsyncStorage is only a nested dependency). Device id falls back to an in-memory session id instead.
+
 ## 0.1.6
 
 ### Changed

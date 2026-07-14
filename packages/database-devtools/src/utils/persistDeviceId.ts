@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeModules } from 'react-native';
 
 import { generateDeviceId } from './ids';
@@ -10,6 +9,9 @@ export type DeviceIdStorage = {
   setItem: (key: string, value: string) => Promise<void>;
 };
 
+/** Optional loader for tests — production uses a lazy require. */
+export type AsyncStorageLoader = () => DeviceIdStorage;
+
 let memoryDeviceId: string | null = null;
 
 function hasAsyncStorageNativeModule(): boolean {
@@ -20,12 +22,28 @@ function hasAsyncStorageNativeModule(): boolean {
   );
 }
 
-export function createAsyncStorageDeviceIdStore(): DeviceIdStorage | null {
+function loadAsyncStorageModule(): DeviceIdStorage {
+  // Lazy require so AsyncStorage module init cannot crash package import
+  // when the native module is null / unlinked.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require('@react-native-async-storage/async-storage') as
+    | DeviceIdStorage
+    | { default: DeviceIdStorage };
+  return 'default' in mod && mod.default ? mod.default : (mod as DeviceIdStorage);
+}
+
+export function createAsyncStorageDeviceIdStore(
+  loadAsyncStorage: AsyncStorageLoader = loadAsyncStorageModule,
+): DeviceIdStorage | null {
   if (!hasAsyncStorageNativeModule()) {
     return null;
   }
 
-  return AsyncStorage;
+  try {
+    return loadAsyncStorage();
+  } catch {
+    return null;
+  }
 }
 
 function loadOrCreateMemoryDeviceId(): string {
@@ -57,6 +75,7 @@ export async function loadOrCreateDeviceId(
 
   return loadOrCreateMemoryDeviceId();
 }
+
 /** @internal Test helper */
 export function resetMemoryDeviceIdForTests(): void {
   memoryDeviceId = null;
