@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export type FloatingButtonCorner = 'bottom-right' | 'bottom-left';
 
 export type FloatingButtonPosition = {
@@ -15,12 +17,21 @@ export type FloatingButtonLayout = {
 export const FLOATING_BUTTON_SIZE = 48;
 export const FLOATING_BUTTON_MARGIN = 16;
 export const FLOATING_BUTTON_BOTTOM = 24;
+/** Extra clearance for Android nav / gesture bar on emulators and devices. */
+export const FLOATING_BUTTON_BOTTOM_ANDROID = 48;
 export const FLOATING_BUTTON_TAP_THRESHOLD = 8;
+
+/** Bottom inset used for default corner placement (higher on Android). */
+export function getDefaultFloatingButtonBottomInset(
+  platformOs: string = Platform.OS,
+): number {
+  return platformOs === 'android' ? FLOATING_BUTTON_BOTTOM_ANDROID : FLOATING_BUTTON_BOTTOM;
+}
 
 export function getCornerPosition(
   corner: FloatingButtonCorner,
   layout: FloatingButtonLayout,
-  bottomInset = FLOATING_BUTTON_BOTTOM,
+  bottomInset = getDefaultFloatingButtonBottomInset(),
 ): FloatingButtonPosition {
   const { windowWidth, windowHeight, buttonSize, margin } = layout;
   const y = windowHeight - bottomInset - buttonSize;

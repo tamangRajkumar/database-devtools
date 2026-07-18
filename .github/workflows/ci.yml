@@ -37,6 +37,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Verify Expo Metro bundles
+        run: pnpm --filter database-devtools test:metro
+
       - name: Build web app
         run: pnpm --filter @database-devtools/web build
 

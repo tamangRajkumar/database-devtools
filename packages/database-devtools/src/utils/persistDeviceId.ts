@@ -1,44 +1,21 @@
-import { NativeModules } from 'react-native';
-
+import {
+  getDeviceIdStorage,
+  type DeviceIdStorage,
+} from './deviceIdStorage';
 import { generateDeviceId } from './ids';
 
 export const PERSISTED_DEVICE_ID_STORAGE_KEY = '@database-devtools/device-id';
 
-export type DeviceIdStorage = {
-  getItem: (key: string) => Promise<string | null>;
-  setItem: (key: string, value: string) => Promise<void>;
-};
+export type { DeviceIdStorage };
 
-/** Optional loader for tests — production uses a lazy require. */
-export type AsyncStorageLoader = () => DeviceIdStorage;
+/** Optional provider for tests; production uses the platform storage module. */
+export type AsyncStorageLoader = () => DeviceIdStorage | null;
 
 let memoryDeviceId: string | null = null;
 
-function hasAsyncStorageNativeModule(): boolean {
-  return Boolean(
-    NativeModules.RNCAsyncStorage ??
-      NativeModules.RNC_AsyncSQLiteDBStoragePassThru ??
-      NativeModules.PlatformLocalStorage,
-  );
-}
-
-function loadAsyncStorageModule(): DeviceIdStorage {
-  // Lazy require so AsyncStorage module init cannot crash package import
-  // when the native module is null / unlinked.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require('@react-native-async-storage/async-storage') as
-    | DeviceIdStorage
-    | { default: DeviceIdStorage };
-  return 'default' in mod && mod.default ? mod.default : (mod as DeviceIdStorage);
-}
-
 export function createAsyncStorageDeviceIdStore(
-  loadAsyncStorage: AsyncStorageLoader = loadAsyncStorageModule,
+  loadAsyncStorage: AsyncStorageLoader = getDeviceIdStorage,
 ): DeviceIdStorage | null {
-  if (!hasAsyncStorageNativeModule()) {
-    return null;
-  }
-
   try {
     return loadAsyncStorage();
   } catch {

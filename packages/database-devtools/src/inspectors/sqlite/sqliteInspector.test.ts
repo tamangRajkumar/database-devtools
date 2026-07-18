@@ -14,7 +14,9 @@ async function createSampleDatabase(): Promise<ArrayBuffer> {
   db.run('INSERT INTO users (id, name) VALUES (1, ?)', ['Ada']);
   const bytes = db.export();
   db.close();
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 describe('isSqliteDatabase', () => {

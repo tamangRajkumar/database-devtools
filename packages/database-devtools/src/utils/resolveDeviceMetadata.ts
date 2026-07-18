@@ -3,12 +3,14 @@ import Constants from 'expo-constants';
 import type { DeviceMetadata } from '../types/protocol';
 
 type ExpoConstants = {
-  expoConfig?: {
-    name?: string;
-    version?: string;
-    ios?: { bundleIdentifier?: string };
-    android?: { package?: string };
-  };
+  expoConfig?:
+    | {
+        name?: string;
+        version?: string;
+        ios?: { bundleIdentifier?: string };
+        android?: { package?: string };
+      }
+    | null;
 };
 
 function getExpoConstants(): ExpoConstants | undefined {

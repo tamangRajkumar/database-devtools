@@ -8,6 +8,20 @@ export const NativeModules = {
 
 export const StyleSheet = {
   create: <T extends Record<string, unknown>>(styles: T) => styles,
+  absoluteFill: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  absoluteFillObject: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
 };
 
 export const View = 'View';

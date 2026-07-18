@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FLOATING_BUTTON_BOTTOM,
+  FLOATING_BUTTON_BOTTOM_ANDROID,
   clampFloatingPosition,
   getCornerPosition,
+  getDefaultFloatingButtonBottomInset,
   isFloatingButtonTap,
   snapFloatingPositionToEdges,
 } from './floatingButtonPosition';
@@ -13,6 +16,16 @@ const layout = {
   margin: 16,
 };
 
+describe('getDefaultFloatingButtonBottomInset', () => {
+  it('uses a taller inset on Android', () => {
+    expect(getDefaultFloatingButtonBottomInset('android')).toBe(FLOATING_BUTTON_BOTTOM_ANDROID);
+  });
+
+  it('uses the default inset on iOS', () => {
+    expect(getDefaultFloatingButtonBottomInset('ios')).toBe(FLOATING_BUTTON_BOTTOM);
+  });
+});
+
 describe('getCornerPosition', () => {
   it('places bottom-right corner', () => {
     expect(getCornerPosition('bottom-right', layout)).toEqual({ x: 336, y: 728 });
@@ -20,6 +33,13 @@ describe('getCornerPosition', () => {
 
   it('places bottom-left corner', () => {
     expect(getCornerPosition('bottom-left', layout)).toEqual({ x: 16, y: 728 });
+  });
+
+  it('honors an explicit Android-style bottom inset', () => {
+    expect(getCornerPosition('bottom-right', layout, FLOATING_BUTTON_BOTTOM_ANDROID)).toEqual({
+      x: 336,
+      y: 704,
+    });
   });
 });
 

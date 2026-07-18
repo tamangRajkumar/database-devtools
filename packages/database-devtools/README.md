@@ -31,11 +31,17 @@ npx expo install database-devtools expo-sqlite
 
 `database-devtools` bundles its mobile UI dependencies (`@expo/vector-icons`, `@react-native-async-storage/async-storage`, `expo-constants`, `expo-clipboard`). You still need **`expo-sqlite`** in your app for the database itself (`react` and `react-native` are expected to already be present).
 
-If AsyncStorage is not linked into your native binary (common when it is only a nested dependency), DevTools still works with a **session-only** device id. To persist device ids across restarts, install and rebuild:
+Native builds use AsyncStorage to persist device IDs across restarts. Install it directly in Expo apps so native autolinking uses the SDK-compatible version:
 
 ```bash
 npx expo install @react-native-async-storage/async-storage
 ```
+
+Web and Node builds never load the native AsyncStorage package and use a **session-only** in-memory device ID. Native storage read/write failures also fall back to an in-memory ID for the current session.
+
+### Floating button missing on Android?
+
+From **0.1.8**, the FAB uses a transparent Modal so it stays above navigators on the Android emulator. If it is still missing: confirm `__DEV__` (or pass `enabled`), upgrade the package, and clear Metro (`npx expo start -c`).
 
 ## Quick start — React Native / Expo
 

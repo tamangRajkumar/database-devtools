@@ -2,13 +2,14 @@
 /**
  * Ensures dist/ contains everything required for npm publish (lib + web UI + wasm).
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const webDist = path.join(packageRoot, 'dist', 'web');
 const errors = [];
+const asyncStorageSpecifier = '@react-native-async-storage/async-storage';
 
 function requirePath(relativePath, label = relativePath) {
   const absolute = path.join(packageRoot, relativePath);
@@ -22,6 +23,44 @@ requirePath('dist/native.js');
 requirePath('dist/cli.cjs');
 requirePath('dist/web/index.html', 'dist/web/index.html');
 requirePath('dist/web/sql-wasm.wasm', 'dist/web/sql-wasm.wasm (stable wasm fallback)');
+
+function readBuiltFile(relativePath) {
+  const absolute = path.join(packageRoot, relativePath);
+  return existsSync(absolute) ? readFileSync(absolute, 'utf8') : null;
+}
+
+const nativeBundle = readBuiltFile('dist/native.js');
+
+if (nativeBundle) {
+  const hasStaticAsyncStorageImport = new RegExp(
+    `import\\s+[^;]+?from\\s+["']${asyncStorageSpecifier.replaceAll('/', '\\/')}["']`,
+  ).test(nativeBundle);
+  const hasDynamicAsyncStorageRequire = new RegExp(
+    `__require\\(\\s*["']${asyncStorageSpecifier.replaceAll('/', '\\/')}["']\\s*\\)`,
+  ).test(nativeBundle);
+
+  if (!hasStaticAsyncStorageImport) {
+    errors.push('dist/native.js is missing a static AsyncStorage import');
+  }
+
+  if (hasDynamicAsyncStorageRequire) {
+    errors.push('dist/native.js contains a Metro-incompatible dynamic AsyncStorage require');
+  }
+}
+
+for (const relativePath of [
+  'dist/index.js',
+  'dist/index.cjs',
+  'dist/server/index.js',
+  'dist/server/index.cjs',
+  'dist/cli.cjs',
+]) {
+  const source = readBuiltFile(relativePath);
+
+  if (source?.includes(asyncStorageSpecifier)) {
+    errors.push(`${relativePath} must not load the native AsyncStorage package`);
+  }
+}
 
 const assetsDir = path.join(webDist, 'assets');
 

@@ -15,6 +15,7 @@ import {
   FLOATING_BUTTON_SIZE,
   clampFloatingPosition,
   getCornerPosition,
+  getDefaultFloatingButtonBottomInset,
   isFloatingButtonTap,
   snapFloatingPositionToEdges,
   type FloatingButtonCorner,
@@ -25,6 +26,7 @@ import { getConnectionDotColor } from './ConnectionStatusBadge';
 const DEFAULT_ICON_SIZE = 22;
 const DEFAULT_ICON_COLOR = '#f8fafc';
 const DEFAULT_BUTTON_COLOR = '#1e293b';
+const FIXED_BOTTOM_INSET = getDefaultFloatingButtonBottomInset();
 
 export type FloatingDevToolsButtonProps = {
   position?: FloatingButtonCorner;
@@ -242,8 +244,9 @@ export function FloatingDevToolsButton({
 const styles = StyleSheet.create({
   fixedContainer: {
     position: 'absolute',
-    bottom: 24,
+    bottom: FIXED_BOTTOM_INSET,
     zIndex: 9999,
+    elevation: 24,
   },
   bottomRight: {
     right: 16,
@@ -256,6 +259,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     zIndex: 9999,
+    elevation: 24,
   },
   button: {
     width: FLOATING_BUTTON_SIZE,
@@ -267,7 +271,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 6,
+    elevation: 24,
   },
   buttonPressed: {
     opacity: 0.85,

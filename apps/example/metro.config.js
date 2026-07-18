@@ -4,6 +4,7 @@ const { getDefaultConfig } = require('expo/metro-config');
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
 const corePackageRoot = path.resolve(monorepoRoot, 'packages/database-devtools');
+const useBuiltPackage = process.env.DATABASE_DEVTOOLS_USE_DIST === '1';
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(projectRoot);
@@ -26,7 +27,10 @@ config.resolver.extraNodeModules = {
     projectRoot,
     'node_modules/@react-native-async-storage/async-storage',
   ),
-  'database-devtools': path.resolve(corePackageRoot, 'src/native.ts'),
+  'database-devtools': path.resolve(
+    corePackageRoot,
+    useBuiltPackage ? 'dist/native.js' : 'src/native.ts',
+  ),
   'database-devtools/adapter': path.resolve(corePackageRoot, 'src/adapter/index.ts'),
 };
 

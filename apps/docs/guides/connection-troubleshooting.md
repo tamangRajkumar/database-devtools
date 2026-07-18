@@ -77,3 +77,16 @@ Allow inbound TCP **3847** on your development machine.
 - `curl localhost:3847/health` → `"mobileCount": 1`
 - CLI log: `✓ Mobile Connected`
 - Web device dropdown lists your app
+
+## Symptom: floating database button not visible (Android emulator)
+
+The FAB is disabled in production (`__DEV__` false) unless you pass `enabled={true}`. From **0.1.8**, the button is hosted in a transparent React Native `Modal` so it paints above React Navigation / Expo Router elevation on Android.
+
+### Checklist
+
+1. Upgrade to `database-devtools@0.1.8` or later and clear Metro: `npx expo start -c`.
+2. Confirm `<DatabaseDevTools />` (or your Gate) mounts in a **dev** build and is present in the tree.
+3. Confirm you are not gating on AsyncStorage/`ready` forever — the overlay should mount once the package loads.
+4. Temporarily try `draggable={false}` and `enabled` to rule out position / `__DEV__` issues.
+
+Hub URL / `10.0.2.2` only affects WebSocket export, not whether the button draws.

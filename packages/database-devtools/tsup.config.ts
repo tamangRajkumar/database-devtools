@@ -1,10 +1,20 @@
 import { defineConfig } from 'tsup';
 
+const libraryExternal = [
+  'react',
+  'react-native',
+  'sql.js',
+  'expo-constants',
+  '@react-native-async-storage/async-storage',
+  '@expo/vector-icons',
+  '@expo/vector-icons/MaterialCommunityIcons',
+  'expo-clipboard',
+];
+
 export default defineConfig([
   {
     entry: {
       index: 'src/index.ts',
-      native: 'src/native.ts',
       'client/index': 'src/client/index.ts',
       'server/index': 'src/server/index.ts',
       'types/protocol': 'src/types/protocol.ts',
@@ -17,17 +27,32 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     clean: true,
-    external: [
-      'react',
-      'react-native',
-      'sql.js',
-      'expo-constants',
-      '@react-native-async-storage/async-storage',
-      '@expo/vector-icons',
-      '@expo/vector-icons/MaterialCommunityIcons',
-      'expo-clipboard',
-    ],
+    external: libraryExternal,
     treeshake: true,
+  },
+  {
+    entry: { native: 'src/native.ts' },
+    format: ['esm', 'cjs'],
+    dts: true,
+    sourcemap: true,
+    clean: false,
+    external: libraryExternal,
+    splitting: false,
+    treeshake: true,
+    esbuildOptions(options) {
+      options.resolveExtensions = [
+        '.native.tsx',
+        '.native.ts',
+        '.native.jsx',
+        '.native.js',
+        '.tsx',
+        '.ts',
+        '.jsx',
+        '.js',
+        '.css',
+        '.json',
+      ];
+    },
   },
   {
     entry: { cli: 'src/cli/index.ts' },

@@ -8,10 +8,10 @@ const ANDROID_LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 export const ANDROID_EMULATOR_HOST = '10.0.2.2';
 
 type ExpoConstantsShape = {
-  expoConfig?: { hostUri?: string };
-  expoGoConfig?: { debuggerHost?: string };
-  manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } };
-  manifest?: { debuggerHost?: string };
+  expoConfig?: { hostUri?: string } | null;
+  expoGoConfig?: { debuggerHost?: string } | null;
+  manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } | null;
+  manifest?: { debuggerHost?: string } | null;
 };
 
 export function isAndroidLoopbackHost(host: string): boolean {

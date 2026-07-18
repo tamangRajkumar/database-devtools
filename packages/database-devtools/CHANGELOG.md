@@ -1,5 +1,12 @@
 # database-devtools
 
+## 0.1.8
+
+### Fixed
+
+- Floating database button can render above navigators on Android (including Studio emulator) by hosting it in a transparent `Modal`, with higher elevation and extra bottom inset for the system nav / gesture bar
+- Metro compatibility: native builds now statically import AsyncStorage through a `.native.ts` provider, while Web and Node builds use an in-memory device ID without loading the native package
+
 ## 0.1.7
 
 ### Fixed
