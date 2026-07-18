@@ -14,11 +14,15 @@ export default defineConfig({
         mocksDir,
         'async-storage.ts',
       ),
+      '@expo/vector-icons/MaterialCommunityIcons': path.join(
+        mocksDir,
+        'material-community-icons.ts',
+      ),
     },
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./vitest.setup.ts'],
   },
 });

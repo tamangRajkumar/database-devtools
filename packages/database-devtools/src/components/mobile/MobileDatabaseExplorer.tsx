@@ -56,7 +56,7 @@ export function MobileDatabaseExplorer() {
     void loadOverview();
   }, [explorerVisible, loadOverview]);
 
-  if (!mobileInspector) {
+  if (!explorerVisible || !mobileInspector) {
     return null;
   }
 

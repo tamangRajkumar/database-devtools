@@ -25,6 +25,10 @@ export function DevToolsLauncherModal() {
     adapterError,
   } = useDevTools();
 
+  if (!launcherVisible) {
+    return null;
+  }
+
   const isExporting = exportState === 'exporting';
   const exportDisabled =
     connectionState !== 'connected' || !database || isExporting || Boolean(adapterError);

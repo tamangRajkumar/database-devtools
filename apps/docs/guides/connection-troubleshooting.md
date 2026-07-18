@@ -80,12 +80,12 @@ Allow inbound TCP **3847** on your development machine.
 
 ## Symptom: floating database button not visible (Android emulator)
 
-The FAB is disabled in production (`__DEV__` false) unless you pass `enabled={true}`. From **0.1.8**, the button is hosted in a transparent React Native `Modal` so it paints above React Navigation / Expo Router elevation on Android.
+The FAB is disabled in production (`__DEV__` false) unless you pass `enabled={true}`. From **0.1.9**, it uses a same-window absolute overlay with `pointerEvents="box-none"` so only the visible button handles touches.
 
 ### Checklist
 
-1. Upgrade to `database-devtools@0.1.8` or later and clear Metro: `npx expo start -c`.
-2. Confirm `<DatabaseDevTools />` (or your Gate) mounts in a **dev** build and is present in the tree.
+1. Upgrade to `database-devtools@0.1.9` or later and clear Metro: `npx expo start -c`.
+2. Confirm `<DatabaseDevTools />` (or your Gate) mounts as a late child of a full-screen root view in a **dev** build.
 3. Confirm you are not gating on AsyncStorage/`ready` forever — the overlay should mount once the package loads.
 4. Temporarily try `draggable={false}` and `enabled` to rule out position / `__DEV__` issues.
 

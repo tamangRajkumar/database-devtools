@@ -39,6 +39,8 @@ type ExportWaiters = {
   reject: (error: Error) => void;
 };
 
+type ActivePanel = 'launcher' | 'settings' | 'explorer' | null;
+
 export function DevToolsProvider({
   children,
   database,
@@ -52,9 +54,7 @@ export function DevToolsProvider({
   const [serverUrl, setServerUrl] = useState(() => resolveServerUrl(initialServerUrl));
   const [deviceId, setDeviceId] = useState<string | undefined>();
   const [deviceIdReady, setDeviceIdReady] = useState(false);
-  const [settingsVisible, setSettingsVisible] = useState(false);
-  const [launcherVisible, setLauncherVisible] = useState(false);
-  const [explorerVisible, setExplorerVisible] = useState(false);
+  const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [mobileInspector, setMobileInspector] = useState<MobileDatabaseInspector | null>(null);
   const [resolvedAdapter, setResolvedAdapter] = useState<DatabaseAdapter | undefined>(explicitAdapter);
   const [adapterError, setAdapterError] = useState<string | null>(null);
@@ -313,29 +313,27 @@ export function DevToolsProvider({
   }, [serverUrl, metadata, clearExportWaiters, deviceIdReady, deviceId]);
 
   const openLauncher = useCallback(() => {
-    setLauncherVisible(true);
+    setActivePanel('launcher');
   }, []);
 
   const closeLauncher = useCallback(() => {
-    setLauncherVisible(false);
+    setActivePanel((current) => (current === 'launcher' ? null : current));
   }, []);
 
   const openExplorer = useCallback(() => {
-    setLauncherVisible(false);
-    setExplorerVisible(true);
+    setActivePanel('explorer');
   }, []);
 
   const closeExplorer = useCallback(() => {
-    setExplorerVisible(false);
+    setActivePanel((current) => (current === 'explorer' ? null : current));
   }, []);
 
   const openSettings = useCallback(() => {
-    setLauncherVisible(false);
-    setSettingsVisible(true);
+    setActivePanel('settings');
   }, []);
 
   const closeSettings = useCallback(() => {
-    setSettingsVisible(false);
+    setActivePanel((current) => (current === 'settings' ? null : current));
   }, []);
 
   const reconnect = useCallback((url: string) => {
@@ -393,6 +391,9 @@ export function DevToolsProvider({
   ]);
 
   const connectionHint = useMemo(() => getConnectionHint(serverUrl), [serverUrl]);
+  const launcherVisible = activePanel === 'launcher';
+  const explorerVisible = activePanel === 'explorer';
+  const settingsVisible = activePanel === 'settings';
 
   const value = useMemo(
     () => ({

@@ -38,6 +38,10 @@ export function DevToolsSettingsModal() {
     }
   }, [settingsVisible, serverUrl]);
 
+  if (!settingsVisible) {
+    return null;
+  }
+
   const handleReconnect = () => {
     const trimmed = draftUrl.trim();
 

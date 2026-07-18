@@ -46,6 +46,15 @@ if (nativeBundle) {
   if (hasDynamicAsyncStorageRequire) {
     errors.push('dist/native.js contains a Metro-incompatible dynamic AsyncStorage require');
   }
+
+  const hasPersistentFabModal =
+    /animationType:\s*"none"[\s\S]{0,300}statusBarTranslucent:\s*true[\s\S]{0,300}transparent:\s*true[\s\S]{0,300}visible:\s*true/.test(
+      nativeBundle,
+    );
+
+  if (hasPersistentFabModal) {
+    errors.push('dist/native.js contains the touch-blocking always-visible FAB Modal');
+  }
 }
 
 for (const relativePath of [

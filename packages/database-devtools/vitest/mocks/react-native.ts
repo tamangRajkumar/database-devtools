@@ -6,8 +6,17 @@ export const NativeModules = {
   PlatformLocalStorage: {},
 };
 
+function flattenStyle(style: unknown): unknown {
+  if (!Array.isArray(style)) {
+    return style ?? {};
+  }
+
+  return Object.assign({}, ...style.filter(Boolean).map(flattenStyle));
+}
+
 export const StyleSheet = {
   create: <T extends Record<string, unknown>>(styles: T) => styles,
+  flatten: flattenStyle,
   absoluteFill: {
     position: 'absolute' as const,
     left: 0,
@@ -36,5 +45,5 @@ export const FlatList = 'FlatList';
 export const useWindowDimensions = () => ({ width: 390, height: 844 });
 
 export const PanResponder = {
-  create: () => ({ panHandlers: {} }),
+  create: (handlers: Record<string, unknown>) => ({ panHandlers: handlers }),
 };

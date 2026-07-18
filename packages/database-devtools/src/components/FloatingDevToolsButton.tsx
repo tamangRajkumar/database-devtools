@@ -227,13 +227,13 @@ export function FloatingDevToolsButton({
           ],
         },
       ]}
-      {...panResponder.panHandlers}
     >
       <View
         accessibilityHint="Drag to move. Tap to open DevTools launcher."
         accessibilityLabel="Open Database DevTools"
         accessibilityRole="button"
         style={[styles.button, buttonStyle, dragPosition && styles.buttonDragging]}
+        {...panResponder.panHandlers}
       >
         {buttonContent}
       </View>
@@ -245,6 +245,8 @@ const styles = StyleSheet.create({
   fixedContainer: {
     position: 'absolute',
     bottom: FIXED_BOTTOM_INSET,
+    width: FLOATING_BUTTON_SIZE,
+    height: FLOATING_BUTTON_SIZE,
     zIndex: 9999,
     elevation: 24,
   },
@@ -258,6 +260,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+    width: FLOATING_BUTTON_SIZE,
+    height: FLOATING_BUTTON_SIZE,
     zIndex: 9999,
     elevation: 24,
   },

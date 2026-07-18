@@ -1,4 +1,4 @@
-import { Modal, StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
 import type { ConnectionState } from '../client/createDevToolsClient';
 import type { DatabaseAdapter } from '../types/adapter';
 import type { DatabaseKind } from '../types/kind';
@@ -68,22 +68,18 @@ export function DatabaseDevTools({
       serverUrl={serverUrl}
       type={type}
     >
-      {/* Transparent Modal elevates the FAB above Android navigator elevation / clipping. */}
-      <Modal animationType="none" statusBarTranslucent transparent visible>
-        <View pointerEvents="box-none" style={styles.overlay}>
-          <FloatingDevToolsButton
-            buttonColor={buttonColor}
-            draggable={draggable}
-            floatingPosition={floatingPosition}
-            iconColor={iconColor}
-            iconStyle={style}
-            onFloatingPositionChange={onFloatingPositionChange}
-            position={position}
-            snapToEdges={snapToEdges}
-          />
-        </View>
-      </Modal>
-      {/* Keep full-screen dialogs as siblings so they are not nested Modals. */}
+      <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, styles.overlay]}>
+        <FloatingDevToolsButton
+          buttonColor={buttonColor}
+          draggable={draggable}
+          floatingPosition={floatingPosition}
+          iconColor={iconColor}
+          iconStyle={style}
+          onFloatingPositionChange={onFloatingPositionChange}
+          position={position}
+          snapToEdges={snapToEdges}
+        />
+      </View>
       <DevToolsLauncherModal />
       <DevToolsSettingsModal />
       <MobileDatabaseExplorer />
@@ -93,8 +89,6 @@ export function DatabaseDevTools({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    flex: 1,
     zIndex: 99999,
     elevation: 24,
   },

@@ -41,7 +41,7 @@ Web and Node builds never load the native AsyncStorage package and use a **sessi
 
 ### Floating button missing on Android?
 
-From **0.1.8**, the FAB uses a transparent Modal so it stays above navigators on the Android emulator. If it is still missing: confirm `__DEV__` (or pass `enabled`), upgrade the package, and clear Metro (`npx expo start -c`).
+From **0.1.9**, the FAB uses a same-window absolute overlay with `pointerEvents="box-none"`, so controls outside the icon stay touchable. Mount `<DatabaseDevTools />` as a late child of a full-screen root view so its elevation can place it above navigators. If it is missing: confirm `__DEV__` (or pass `enabled`), upgrade the package, and clear Metro (`npx expo start -c`).
 
 ## Quick start — React Native / Expo
 

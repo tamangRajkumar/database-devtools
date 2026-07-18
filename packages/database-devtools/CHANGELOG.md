@@ -1,5 +1,13 @@
 # database-devtools
 
+## 0.1.9
+
+### Fixed
+
+- Floating database button no longer uses an always-visible native `Modal`, so host application controls outside the 48×48 button remain touchable
+- Launcher, settings, and mobile explorer Modals now mount only while their panel is open and remain mutually exclusive
+- Draggable responder handling is scoped directly to the visible database button
+
 ## 0.1.8
 
 ### Fixed
